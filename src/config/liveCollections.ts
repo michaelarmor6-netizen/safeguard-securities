@@ -1,0 +1,46 @@
+export const LIVE_COLLECTIONS = {
+  profiles: 'profiles',
+  wallets: 'wallets',
+  watchlists: 'watchlists',
+  portfolioHoldings: 'portfolioHoldings',
+  fundingRequests: 'fundingRequests',
+  invoices: 'invoices',
+  clientNotifications: 'clientNotifications',
+  staffNotifications: 'staffNotifications',
+  orders: 'adminOrders',
+  priceAlerts: 'priceAlerts',
+  trades: 'trades',
+  walletTransactions: 'walletTransactions',
+  settings: 'platformSettings',
+  supportTickets: 'supportTickets',
+  auditLogs: 'auditLogs',
+  kycSubmissions: 'kycSubmissions',
+  kycDocuments: 'kycDocuments',
+  strategies: 'strategies',
+  aiSignals: 'aiSignals',
+  aiUsage: 'aiUsage',
+  planRequests: 'planRequests',
+  referralCodes: 'referralCodes',
+  referrals: 'referrals',
+  assetGroups: 'assetGroups',
+  assets: 'assets',
+  cashLedger: 'cashLedger',
+  subPortfolios: 'subPortfolios',
+  subPortfolioHoldings: 'subPortfolioHoldings',
+  portfolioSnapshots: 'portfolioSnapshots',
+  // CRM (lead intake -> Vicidial CSV / email funnel). Staff-only by rule.
+  crmLeads: 'crmLeads',
+  crmImports: 'crmImports',
+  crmSuppression: 'crmSuppression',
+  crmInstruments: 'crmInstruments',
+  crmCampaigns: 'crmCampaigns',
+  crmEnrollments: 'crmEnrollments',
+  crmEmailEvents: 'crmEmailEvents',
+  crmInbound: 'crmInbound',
+  crmSources: 'crmSources',
+} as const;
+
+// The investor platform is the live app. The older bank dashboard is opt-in
+// (VITE_APP_MODE=bank). An unset flag must not replace the live site with it:
+// the GitHub hosting build has no .env file, and that shipped the bank login.
+export const isSafeguardMode = import.meta.env.VITE_APP_MODE !== 'bank';
