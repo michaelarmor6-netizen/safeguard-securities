@@ -26,8 +26,7 @@ import NotificationCenter from '../admin/NotificationCenter';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSystemConfigContext } from '../../contexts/SystemConfigContext';
 import { UserRole } from '../../types';
-import { signOut } from 'firebase/auth';
-import { auth } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 import toast from 'react-hot-toast';
 
 // Admin navigation items
@@ -142,7 +141,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, subtitle }) 
     try {
       // Clear any cached data and sign out
       localStorage.clear(); // Clear any cached data
-      await signOut(auth);
+      await supabase.auth.signOut();
       toast.success('Successfully signed out');
       
       // Redirect to admin access page

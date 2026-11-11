@@ -27,7 +27,7 @@ export default function InvestorPortfolioPage() {
     if (!user) return;
     let cancelled = false;
     const load = (initial: boolean) => {
-      Promise.all([getUserPortfolio(user.uid), getPortfolioStatsForUser(user.uid)])
+      Promise.all([getUserPortfolio(user.id), getPortfolioStatsForUser(user.id)])
         .then(([h, s]) => {
           if (cancelled) return;
           setHoldings(h);

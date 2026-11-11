@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Lock, ShieldAlert } from 'lucide-react';
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
+import { supabase } from '../../../../config/supabase';
 import { useInvestorAuth } from '../../../../contexts/InvestorAuthContext';
 import { getFirebaseAuthErrorMessage } from '../../../../lib/firebaseAuthErrors';
 import { getPlatformSettings, updatePlatformSettings, DEFAULTS } from '../../../../services/investor/settingsService';
@@ -34,9 +34,10 @@ export default function SettingsSecuritySection() {
     }
     setChangingPassword(true);
     try {
-      const credential = EmailAuthProvider.credential(user.email, currentPassword);
-      await reauthenticateWithCredential(user, credential);
-      await updatePassword(user, newPassword);
+      // Re-authenticate with current password, then update
+      await supabase.auth.signInWithPassword({ email: user.email, password: currentPassword });
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
       toast.success('Password updated');
       setCurrentPassword('');
       setNewPassword('');
@@ -55,7 +56,7 @@ export default function SettingsSecuritySection() {
         sessionTimeoutMinutes: Number(form.sessionTimeoutMinutes) || DEFAULTS.sessionTimeoutMinutes,
         minPasswordLength: Number(form.minPasswordLength) || DEFAULTS.minPasswordLength,
       });
-      if (user) logAction(user.uid, profile?.email ?? '', 'Security policy updated', `timeout ${form.sessionTimeoutMinutes}m, min pw ${form.minPasswordLength}`);
+      if (user) logAction(user.id, profile?.email ?? '', 'Security policy updated', `timeout ${form.sessionTimeoutMinutes}m, min pw ${form.minPasswordLength}`);
       toast.success('Saved');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save');

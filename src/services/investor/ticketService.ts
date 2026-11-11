@@ -1,5 +1,4 @@
-import { addDoc, collection, doc, getDocs, orderBy, query, updateDoc, where, type DocumentData } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase, nowISO } from '../../config/supabase';
 import { LIVE_COLLECTIONS } from '../../config/liveCollections';
 
 export interface SupportTicket {
@@ -13,50 +12,60 @@ export interface SupportTicket {
   createdAt?: Date;
 }
 
-function mapTicket(id: string, data: DocumentData): SupportTicket {
+function mapTicket(id: string, data: any): SupportTicket {
   return {
     id,
-    userId: data.userId ?? '',
-    userEmail: data.userEmail,
+    userId: data.user_id ?? data.userId ?? '',
+    userEmail: data.user_email ?? data.userEmail,
     subject: data.subject ?? '',
     message: data.message ?? '',
     status: data.status ?? 'open',
-    adminReply: data.adminReply,
-    createdAt: data.createdAt?.toDate?.(),
+    adminReply: data.admin_reply ?? data.adminReply,
+    createdAt: data.created_at ? new Date(data.created_at) : undefined,
   };
 }
 
 export async function getAllTickets(): Promise<SupportTicket[]> {
-  const snap = await getDocs(query(collection(db, LIVE_COLLECTIONS.supportTickets), orderBy('createdAt', 'desc')));
-  return snap.docs.map((d) => mapTicket(d.id, d.data()));
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.supportTickets)
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error || !data) return [];
+  return data.map((d) => mapTicket(d.id, d));
 }
 
 export async function getTicketsForUser(userId: string): Promise<SupportTicket[]> {
-  const snap = await getDocs(
-    query(collection(db, LIVE_COLLECTIONS.supportTickets), where('userId', '==', userId), orderBy('createdAt', 'desc')),
-  );
-  return snap.docs.map((d) => mapTicket(d.id, d.data()));
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.supportTickets)
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error || !data) return [];
+  return data.map((d) => mapTicket(d.id, d));
 }
 
 export async function createTicket(userId: string, userEmail: string, subject: string, message: string) {
-  return addDoc(collection(db, LIVE_COLLECTIONS.supportTickets), {
-    userId,
-    userEmail,
+  return supabase.from(LIVE_COLLECTIONS.supportTickets).insert({
+    user_id: userId,
+    user_email: userEmail,
     subject,
     message,
     status: 'open',
-    createdAt: new Date(),
+    created_at: nowISO(),
   });
 }
 
 export async function replyToTicket(id: string, adminReply: string) {
-  await updateDoc(doc(db, LIVE_COLLECTIONS.supportTickets, id), {
-    adminReply,
+  await supabase.from(LIVE_COLLECTIONS.supportTickets).update({
+    admin_reply: adminReply,
     status: 'answered',
-    updatedAt: new Date(),
-  });
+    updated_at: nowISO(),
+  }).eq('id', id);
 }
 
 export async function closeTicket(id: string) {
-  await updateDoc(doc(db, LIVE_COLLECTIONS.supportTickets, id), { status: 'closed', updatedAt: new Date() });
+  await supabase.from(LIVE_COLLECTIONS.supportTickets).update({
+    status: 'closed',
+    updated_at: nowISO(),
+  }).eq('id', id);
 }

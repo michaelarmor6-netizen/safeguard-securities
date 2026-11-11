@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth, useSignUp } from '@clerk/react';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { auth } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 import { isPlausibleReferralCode } from '../../lib/referralCodes';
 import { isSuperAdminEmail } from '../../lib/investorRoles';
 import { recordReferral } from '../../services/investor/referralService';
@@ -26,12 +26,16 @@ export function ClerkSignupForm() {
     const finalized = await signUp.finalize();
     if (finalized.error) throw new Error(messageFromClerkError(finalized.error));
     await connectClerkSession(() => getToken());
-    if (referralCode && isPlausibleReferralCode(referralCode) && auth.currentUser) {
-      await recordReferral({
-        code: referralCode,
-        referredUserId: auth.currentUser.uid,
-        referredEmail: auth.currentUser.email ?? undefined,
-      });
+    if (referralCode && isPlausibleReferralCode(referralCode)) {
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
+      if (user) {
+        await recordReferral({
+          code: referralCode,
+          referredUserId: user.id,
+          referredEmail: user.email ?? undefined,
+        });
+      }
     }
     toast.success('Account created — pending review');
   };

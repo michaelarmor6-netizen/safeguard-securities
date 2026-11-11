@@ -1,21 +1,12 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
   base: '/',
 
   resolve: {
-    alias: {
-      'firebase/app': path.resolve(__dirname, 'src/config/firebase-stub.ts'),
-      'firebase/auth': path.resolve(__dirname, 'src/config/firebase-stub.ts'),
-      'firebase/firestore': path.resolve(__dirname, 'src/config/firebase-stub.ts'),
-      'firebase/storage': path.resolve(__dirname, 'src/config/firebase-stub.ts'),
-      'firebase/functions': path.resolve(__dirname, 'src/config/firebase-stub.ts'),
-      '@firebase/app': path.resolve(__dirname, 'src/config/firebase-stub.ts'),
-      '@firebase/auth': path.resolve(__dirname, 'src/config/firebase-stub.ts'),
-    },
+    alias: {},
   },
 
   build: {

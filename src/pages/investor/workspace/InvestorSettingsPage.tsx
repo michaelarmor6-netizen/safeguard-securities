@@ -16,12 +16,7 @@ import {
   Gift,
   Copy,
 } from 'lucide-react';
-import {
-  EmailAuthProvider,
-  reauthenticateWithCredential,
-  updatePassword,
-  verifyBeforeUpdateEmail,
-} from 'firebase/auth';
+import { supabase } from '../../../config/supabase';
 import { useInvestorAuth } from '../../../contexts/InvestorAuthContext';
 import {
   SETTINGS_ITEMS,
@@ -132,7 +127,7 @@ export default function InvestorSettingsPage() {
 
   useEffect(() => {
     if (!user) return;
-    getKycSubmissionsForUser(user.uid)
+    getKycSubmissionsForUser(user.id)
       .then((subs) => setKyc(subs[0] ?? null))
       .catch(() => setKyc(null))
       .finally(() => setKycLoading(false));
@@ -158,7 +153,7 @@ export default function InvestorSettingsPage() {
     if (!user) return;
     setSavingProfile(true);
     try {
-      await updateInvestorProfile(user.uid, { firstName, lastName, phone });
+      await updateInvestorProfile(user.id, { firstName, lastName, phone });
       await refreshProfile();
       toast.success('Profile updated');
     } catch (err) {
@@ -177,7 +172,7 @@ export default function InvestorSettingsPage() {
     }
     setSavingAddress(true);
     try {
-      await updateInvestorProfile(user.uid, { address });
+      await updateInvestorProfile(user.id, { address });
       await refreshProfile();
       toast.success('Address updated');
     } catch (err) {
@@ -192,7 +187,7 @@ export default function InvestorSettingsPage() {
     if (!user) return;
     setSavingInvestment(true);
     try {
-      await updateInvestorProfile(user.uid, { employment, investmentProfile });
+      await updateInvestorProfile(user.id, { employment, investmentProfile });
       await refreshProfile();
       toast.success('Employment & investment profile updated');
     } catch (err) {
@@ -205,20 +200,21 @@ export default function InvestorSettingsPage() {
   const changeEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !user.email) return;
-    if (!newEmail.trim() || !emailPassword) {
-      toast.error('Enter your new email and current password');
+    if (!newEmail.trim()) {
+      toast.error('Enter your new email');
       return;
     }
     setChangingEmail(true);
     try {
-      const credential = EmailAuthProvider.credential(user.email, emailPassword);
-      await reauthenticateWithCredential(user, credential);
-      await verifyBeforeUpdateEmail(user, newEmail.trim());
+      // Re-authenticate with current password before changing email
+      await supabase.auth.signInWithPassword({ email: user.email, password: emailPassword });
+      const { error } = await supabase.auth.updateUser({ email: newEmail.trim() });
+      if (error) throw error;
       toast.success(`Verification link sent to ${newEmail.trim()}. Your email updates once you confirm it.`);
       setNewEmail('');
       setEmailPassword('');
     } catch (err) {
-      toast.error(getFirebaseAuthErrorMessage(err));
+      toast.error(err instanceof Error ? err.message : getFirebaseAuthErrorMessage(err));
     } finally {
       setChangingEmail(false);
     }
@@ -233,14 +229,15 @@ export default function InvestorSettingsPage() {
     }
     setChangingPassword(true);
     try {
-      const credential = EmailAuthProvider.credential(user.email, currentPassword);
-      await reauthenticateWithCredential(user, credential);
-      await updatePassword(user, newPassword);
+      // Re-authenticate with current password
+      await supabase.auth.signInWithPassword({ email: user.email, password: currentPassword });
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
       toast.success('Password updated');
       setCurrentPassword('');
       setNewPassword('');
     } catch (err) {
-      toast.error(getFirebaseAuthErrorMessage(err));
+      toast.error(err instanceof Error ? err.message : getFirebaseAuthErrorMessage(err));
     } finally {
       setChangingPassword(false);
     }
@@ -252,7 +249,7 @@ export default function InvestorSettingsPage() {
     setRequestingClosure(true);
     try {
       await createTicket(
-        user.uid,
+        user.id,
         profile?.email ?? user.email ?? '',
         'Account Closure Request',
         closureReason.trim() || 'No reason provided.',
@@ -274,18 +271,18 @@ export default function InvestorSettingsPage() {
   const activeItem = findSettingsItem(activeSection);
 
   useEffect(() => {
-    if (activeSection !== 'refer-a-friend' || !user?.uid) return;
+    if (activeSection !== 'refer-a-friend' || !user?.id) return;
     let cancelled = false;
-    getOrCreateReferralCode(user.uid, profile?.displayName, profile?.email).then((code) => {
+    getOrCreateReferralCode(user.id, profile?.displayName, profile?.email).then((code) => {
       if (!cancelled) setReferralCode(code);
     });
-    getMyReferrals(user.uid).then((list) => {
+    getMyReferrals(user.id).then((list) => {
       if (!cancelled) setReferrals(list);
     });
     return () => {
       cancelled = true;
     };
-  }, [activeSection, user?.uid, profile?.displayName, profile?.email]);
+  }, [activeSection, user?.id, profile?.displayName, profile?.email]);
 
   const copyReferralLink = async () => {
     try {

@@ -31,27 +31,27 @@ export default function InvestorPlanPage() {
   const [requesting, setRequesting] = useState(false);
 
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.id) return;
     let cancelled = false;
-    getPendingPlanRequest(user.uid).then((r) => {
+    getPendingPlanRequest(user.id).then((r) => {
       if (!cancelled) setPlanRequest(r);
     });
     return () => {
       cancelled = true;
     };
-  }, [user?.uid]);
+  }, [user?.id]);
 
   const askForPlan = async (requestedPlan: SubscriptionPlan) => {
-    if (!user?.uid) return;
+    if (!user?.id) return;
     setRequesting(true);
     try {
       await requestPlanChange({
-        userId: user.uid,
+        userId: user.id,
         userEmail: profile?.email,
         currentPlan: entitlements.plan,
         requestedPlan,
       });
-      setPlanRequest(await getPendingPlanRequest(user.uid));
+      setPlanRequest(await getPendingPlanRequest(user.id));
       toast.success('Request sent — your account manager will be in touch.');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not send the request');

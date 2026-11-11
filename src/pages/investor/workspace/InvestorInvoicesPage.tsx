@@ -16,7 +16,7 @@ export default function InvestorInvoicesPage() {
   useEffect(() => {
     if (!user) return;
     getFundingDetails().then(setDetails).catch(() => undefined);
-    getInvoicesForUser(user.uid)
+    getInvoicesForUser(user.id)
       .then(setRows)
       .catch((e) => toast.error(e instanceof Error ? e.message : 'Failed to load invoices'));
   }, [user]);
@@ -76,7 +76,7 @@ export default function InvestorInvoicesPage() {
                       <InvoicePaymentInstructions
                         invoice={inv}
                         details={details}
-                        userId={user.uid}
+                        userId={user.id}
                         onChanged={(next) => setRows((cur) => cur.map((r) => (r.id === next.id ? next : r)))}
                       />
                     </td>

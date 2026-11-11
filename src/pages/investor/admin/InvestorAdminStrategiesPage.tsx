@@ -31,7 +31,7 @@ export default function InvestorAdminStrategiesPage() {
     setSubmitting(true);
     try {
       await createStrategy({ name: name.trim(), description: description.trim(), riskLevel, targetAllocation: targetAllocation.trim() });
-      if (user) logAction(user.uid, adminProfile?.email ?? '', 'Strategy created', name.trim());
+      if (user) logAction(user.id, adminProfile?.email ?? '', 'Strategy created', name.trim());
       toast.success('Strategy created');
       setName('');
       setDescription('');
@@ -96,7 +96,7 @@ export default function InvestorAdminStrategiesPage() {
               onClick={async () => {
                 try {
                   await deleteStrategy(s.id);
-                  if (user) logAction(user.uid, adminProfile?.email ?? '', 'Strategy deleted', s.name);
+                  if (user) logAction(user.id, adminProfile?.email ?? '', 'Strategy deleted', s.name);
                   toast.success('Strategy deleted');
                   load();
                 } catch (e) {

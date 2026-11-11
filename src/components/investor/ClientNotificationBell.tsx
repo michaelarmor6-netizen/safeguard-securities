@@ -18,7 +18,7 @@ export default function ClientNotificationBell() {
 
   useEffect(() => {
     if (!user) return;
-    return subscribeNoticesForUser(user.uid, setRows);
+    return subscribeNoticesForUser(user.id, setRows);
   }, [user]);
 
   useEffect(() => {

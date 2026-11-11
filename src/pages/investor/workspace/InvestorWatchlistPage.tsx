@@ -19,7 +19,7 @@ export default function InvestorWatchlistPage() {
   const load = () => {
     if (!user) return;
     setLoading(true);
-    Promise.all([getWatchlistSymbols(user.uid), getAllAssets()])
+    Promise.all([getWatchlistSymbols(user.id), getAllAssets()])
       .then(([s, a]) => {
         setSymbols(s);
         setAssets(a);
@@ -47,7 +47,7 @@ export default function InvestorWatchlistPage() {
   const remove = async (symbol: string) => {
     if (!user) return;
     try {
-      await removeFromWatchlist(user.uid, symbol);
+      await removeFromWatchlist(user.id, symbol);
       setSymbols((prev) => prev.filter((s) => s !== symbol));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to remove');
@@ -57,7 +57,7 @@ export default function InvestorWatchlistPage() {
   const add = async (symbol: string) => {
     if (!user) return;
     try {
-      await addToWatchlist(user.uid, symbol);
+      await addToWatchlist(user.id, symbol);
       setSymbols((prev) => [...prev, symbol]);
       setSearch('');
       toast.success(`${symbol} added to watchlist`);

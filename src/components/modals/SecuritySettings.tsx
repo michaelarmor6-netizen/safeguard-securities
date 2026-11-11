@@ -15,8 +15,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 import PasswordSecurityService, { PasswordStrength } from '../../services/PasswordSecurityService';
 import toast from 'react-hot-toast';
 
@@ -65,7 +64,7 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onClose }) => {
 
   // Load user security settings
   useEffect(() => {
-    if (user?.uid) {
+    if (user?.id) {
       loadSecuritySettings();
     }
   }, [user]);
@@ -82,17 +81,22 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onClose }) => {
 
   const loadSecuritySettings = async () => {
     try {
-      const userDoc = await getDoc(doc(db, 'users', user!.uid));
-      const userData = userDoc.data();
-      
+      const { data: userDoc, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      const userData = userDoc ?? null;
+
       if (userData?.security) {
-        setTwoFactorEnabled(userData.security.twoFactorEnabled || false);
+        setTwoFactorEnabled((userData.security as any)?.two_factor_enabled || false);
         setSecuritySettings({
-          loginNotifications: userData.security.loginNotifications ?? true,
-          transactionAlerts: userData.security.transactionAlerts ?? true,
-          deviceTracking: userData.security.deviceTracking ?? true,
-          sessionTimeout: userData.security.sessionTimeout || 30,
-          passwordExpiry: userData.security.passwordExpiry || 90
+          loginNotifications: (userData.security as any)?.loginNotifications ?? true,
+          transactionAlerts: (userData.security as any)?.transactionAlerts ?? true,
+          deviceTracking: (userData.security as any)?.deviceTracking ?? true,
+          sessionTimeout: (userData.security as any)?.sessionTimeout || 30,
+          passwordExpiry: (userData.security as any)?.passwordExpiry || 90
         });
       }
     } catch (error) {
@@ -181,11 +185,11 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onClose }) => {
   };
 
   const handleSetup2FA = async () => {
-    if (!user?.uid) return;
+    if (!user?.id) return;
     
     setLoading(true);
     try {
-      const setup = await PasswordSecurityService.setup2FA(user.uid);
+      const setup = await PasswordSecurityService.setup2FA(user.id);
       setTwoFactorSetup(setup);
       setShowSetup2FA(true);
     } catch (error) {
@@ -197,11 +201,11 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onClose }) => {
   };
 
   const handleEnable2FA = async () => {
-    if (!user?.uid || !verificationCode) return;
+    if (!user?.id || !verificationCode) return;
     
     setLoading(true);
     try {
-      const success = await PasswordSecurityService.enable2FA(user.uid, verificationCode);
+      const success = await PasswordSecurityService.enable2FA(user.id, verificationCode);
       if (success) {
         setTwoFactorEnabled(true);
         setShowSetup2FA(false);
@@ -216,7 +220,7 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onClose }) => {
   };
 
   const handleDisable2FA = async () => {
-    if (!user?.uid) return;
+    if (!user?.id) return;
     
     const password = prompt('Enter your password to disable 2FA:');
     const code = prompt('Enter your current 2FA code:');
@@ -225,7 +229,7 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onClose }) => {
     
     setLoading(true);
     try {
-      const success = await PasswordSecurityService.disable2FA(user.uid, password, code);
+      const success = await PasswordSecurityService.disable2FA(user.id, password, code);
       if (success) {
         setTwoFactorEnabled(false);
       }

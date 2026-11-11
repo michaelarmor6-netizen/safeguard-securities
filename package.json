@@ -13,17 +13,8 @@
     "type-check": "tsc -b --noEmit",
     "clean": "rimraf dist",
     "analyze": "npx vite-bundle-analyzer",
-    "deploy": "npm run build && firebase deploy",
-    "deploy:hosting": "npm run build && firebase deploy --only hosting",
-    "deploy:rules": "firebase deploy --only firestore:rules,storage",
-    "deploy:functions": "firebase deploy --only functions",
-    "deploy:functions:accounts": "firebase deploy --only functions:accounts",
-    "deploy:functions:market": "firebase deploy --only functions:market",
-    "test:rules": "firebase emulators:exec --only firestore \"vitest run\"",
-    "test": "npm run test:rules --prefix . && npm --prefix functions-trading run test",
-    "emulators": "npm --prefix functions-trading run build && firebase emulators:start --only auth,firestore,functions,storage --import .emulator-data --export-on-exit .emulator-data",
-    "emulators:fresh": "npm --prefix functions-trading run build && firebase emulators:start --only auth,firestore,functions,storage",
-    "seed": "node functions-trading/scripts/seed-emulator.mjs"
+    "deploy": "npm run build",
+    "deploy:hosting": "npm run build"
   },
   "dependencies": {
     "@clerk/react": "^6.17.2",
@@ -34,7 +25,6 @@
     "autoprefixer": "^10.4.21",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "firebase": "^9.14.0",
     "jspdf": "^4.2.1",
     "libphonenumber-js": "^1.13.11",
     "lightweight-charts": "^5.2.1",
@@ -52,7 +42,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
-    "@firebase/rules-unit-testing": "^2.0.7",
     "@types/node": "^24.10.0",
     "@types/react": "^19.1.16",
     "@types/react-dom": "^19.1.9",
@@ -60,7 +49,6 @@
     "eslint": "^9.36.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.22",
-    "firebase-admin": "^14.2.0",
     "globals": "^16.4.0",
     "terser": "^5.44.1",
     "typescript": "~5.9.3",

@@ -62,7 +62,7 @@ export default function SettingsFundingDetailsSection() {
       };
       await updateFundingDetails(cleaned);
       setForm(cleaned);
-      if (user) logAction(user.uid, profile?.email ?? '', 'Funding details updated');
+      if (user) logAction(user.id, profile?.email ?? '', 'Funding details updated');
       toast.success('Funding details saved');
       const bankFieldsFilled =
         [cleaned.bankName, cleaned.bankAccountName, cleaned.bankAccountNumber, cleaned.bankSwift,

@@ -113,7 +113,7 @@ export default function InvestorTradeDeskPage() {
 
   useEffect(() => {
     if (!user) return;
-    getWatchlistSymbols(user.uid).then(setWatchlistSymbols).catch(() => {});
+    getWatchlistSymbols(user.id).then(setWatchlistSymbols).catch(() => {});
   }, [user]);
 
   const toggleWatchlist = async (symbol: string) => {
@@ -121,8 +121,8 @@ export default function InvestorTradeDeskPage() {
     const isWatched = watchlistSymbols.includes(symbol);
     setWatchlistSymbols((prev) => (isWatched ? prev.filter((s) => s !== symbol) : [...prev, symbol]));
     try {
-      if (isWatched) await removeFromWatchlist(user.uid, symbol);
-      else await addToWatchlist(user.uid, symbol);
+      if (isWatched) await removeFromWatchlist(user.id, symbol);
+      else await addToWatchlist(user.id, symbol);
     } catch (err) {
       setWatchlistSymbols((prev) => (isWatched ? [...prev, symbol] : prev.filter((s) => s !== symbol)));
       toast.error(err instanceof Error ? err.message : 'Failed to update watchlist');
@@ -154,12 +154,12 @@ export default function InvestorTradeDeskPage() {
   const load = () => {
     if (!user) return;
     Promise.all([
-      getUserPortfolio(user.uid),
-      getPortfolioStatsForUser(user.uid),
-      getUserWallet(user.uid),
-      getOrdersForUser(user.uid),
-      getTradesForUser(user.uid),
-      getFundingRequestsForUser(user.uid),
+      getUserPortfolio(user.id),
+      getPortfolioStatsForUser(user.id),
+      getUserWallet(user.id),
+      getOrdersForUser(user.id),
+      getTradesForUser(user.id),
+      getFundingRequestsForUser(user.id),
     ])
       .then(([h, s, w, o, t, f]) => {
         setHoldings(h);
@@ -285,7 +285,7 @@ export default function InvestorTradeDeskPage() {
     }
     setSubmittingOrder(true);
     try {
-      await createOrder(user.uid, profile?.email ?? user.email ?? '', orderSymbol.trim(), orderSide, qty);
+      await createOrder(user.id, profile?.email ?? user.email ?? '', orderSymbol.trim(), orderSide, qty);
       toast.success('Order submitted for execution');
       setOrderSymbol('');
       setOrderQty('');

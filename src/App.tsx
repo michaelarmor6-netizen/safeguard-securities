@@ -3,15 +3,11 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SystemConfigProvider } from './contexts/SystemConfigContext';
-import { UserRole } from './types';
 import ErrorBoundary from './components/ErrorBoundary';
-import { isSafeguardMode } from './config/liveCollections';
-import SafeguardApp from './SafeguardApp';
 
-// Auth pages - bank-standard separation
+// Auth pages
 import ClientLoginPage from './pages/auth/ClientLoginPage';
 import ChangePasswordPage from './pages/auth/ChangePasswordPage';
-// SignupPage removed - admin-only account creation system
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 
 // Client pages
@@ -45,56 +41,26 @@ import SystemSettings from './pages/admin/SystemSettings';
 // Admin Access
 import AdminAccessPage from './pages/auth/AdminAccessPage';
 
-// Loading component
 const LoadingSpinner = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50">
-    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
   </div>
 );
 
-// Protected Route wrapper
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: UserRole;
+  adminOnly?: boolean;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, adminOnly }) => {
   const { user, loading } = useAuth();
 
-  if (loading) {
-    return <LoadingSpinner />;
-  }
-
-  if (!user) {
-    // Redirect based on the required role for proper separation
-    if (requiredRole && (requiredRole === UserRole.ADMIN || requiredRole === UserRole.SUPER_ADMIN)) {
-      return <Navigate to="/admin-access" replace />;
-    } else {
-      // For client routes, redirect to client login
-      return <Navigate to="/client-login" replace />;
-    }
-  }
-
-  if (requiredRole) {
-    // Check role hierarchy: SUPER_ADMIN can access ADMIN routes, ADMIN can access ADMIN routes
-    // Also handle case-insensitive role matching for backward compatibility
-    const userRole = user.role?.toLowerCase();
-    const reqRole = requiredRole.toLowerCase();
-    
-    const hasAccess = 
-      userRole === reqRole || 
-      user.role === requiredRole ||
-      (reqRole === UserRole.ADMIN && (userRole === UserRole.SUPER_ADMIN || user.role === UserRole.SUPER_ADMIN));
-    
-    if (!hasAccess) {
-      return <Navigate to={user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN ? '/admin' : '/dashboard'} replace />;
-    }
-  }
+  if (loading) return <LoadingSpinner />;
+  if (!user) return <Navigate to={adminOnly ? "/admin-access" : "/client-login"} replace />;
 
   return <>{children}</>;
 };
 
-// Public Route wrapper (redirects to dashboard if authenticated)
 interface PublicRouteProps {
   children: React.ReactNode;
 }
@@ -102,19 +68,8 @@ interface PublicRouteProps {
 const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
   const { user, loading } = useAuth();
 
-  if (loading) {
-    return <LoadingSpinner />;
-  }
-
-  if (user) {
-    // Route based on user role (handle both uppercase and lowercase roles)
-    const userRole = user.role?.toLowerCase();
-    if (userRole === UserRole.SUPER_ADMIN || userRole === UserRole.ADMIN || 
-        user.role === UserRole.SUPER_ADMIN || user.role === UserRole.ADMIN) {
-      return <Navigate to="/admin" replace />;
-    }
-    return <Navigate to="/dashboard" replace />;
-  }
+  if (loading) return <LoadingSpinner />;
+  if (user) return <Navigate to="/dashboard" replace />;
 
   return <>{children}</>;
 };
@@ -124,256 +79,48 @@ function AppContent() {
     <div className="min-h-screen bg-gray-50">
       <Routes>
         {/* Public routes */}
-        {/* Old login removed - using admin-access and client-login instead */}
-        <Route
-          path="/client-login"
-          element={
-            <PublicRoute>
-              <ClientLoginPage />
-            </PublicRoute>
-          }
-        />
-        {/* Signup disabled - accounts created by admin only */}
-        <Route
-          path="/forgot-password"
-          element={
-            <PublicRoute>
-              <ForgotPasswordPage />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/admin-access"
-          element={
-            <PublicRoute>
-              <AdminAccessPage />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/change-password"
-          element={
-            <ChangePasswordPage />
-          }
-        />
+        <Route path="/client-login" element={<PublicRoute><ClientLoginPage /></PublicRoute>} />
+        <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+        <Route path="/admin-access" element={<PublicRoute><AdminAccessPage /></PublicRoute>} />
+        <Route path="/change-password" element={<ChangePasswordPage />} />
 
         {/* Client routes */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute requiredRole={UserRole.CLIENT}>
-              <ClientDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/account"
-          element={
-            <ProtectedRoute requiredRole={UserRole.CLIENT}>
-              <AccountOverview />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/transactions"
-          element={
-            <ProtectedRoute requiredRole={UserRole.CLIENT}>
-              <TransactionHistory />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/deposit"
-          element={
-            <ProtectedRoute requiredRole={UserRole.CLIENT}>
-              <DepositFunds />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/withdraw"
-          element={
-            <ProtectedRoute requiredRole={UserRole.CLIENT}>
-              <WithdrawFunds />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/transfer"
-          element={
-            <ProtectedRoute requiredRole={UserRole.CLIENT}>
-              <TransferFunds />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/ewallets"
-          element={
-            <ProtectedRoute requiredRole={UserRole.CLIENT}>
-              <EWalletManagement />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute requiredRole={UserRole.CLIENT}>
-              <Profile />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/reports"
-          element={
-            <ProtectedRoute requiredRole={UserRole.CLIENT}>
-              <ReportsAnalytics />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/statements"
-          element={
-            <ProtectedRoute requiredRole={UserRole.CLIENT}>
-              <Statements />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/help"
-          element={
-            <ProtectedRoute requiredRole={UserRole.CLIENT}>
-              <HelpSupport />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/dashboard" element={<ProtectedRoute><ClientDashboard /></ProtectedRoute>} />
+        <Route path="/account" element={<ProtectedRoute><AccountOverview /></ProtectedRoute>} />
+        <Route path="/transactions" element={<ProtectedRoute><TransactionHistory /></ProtectedRoute>} />
+        <Route path="/deposit" element={<ProtectedRoute><DepositFunds /></ProtectedRoute>} />
+        <Route path="/withdraw" element={<ProtectedRoute><WithdrawFunds /></ProtectedRoute>} />
+        <Route path="/transfer" element={<ProtectedRoute><TransferFunds /></ProtectedRoute>} />
+        <Route path="/ewallets" element={<ProtectedRoute><EWalletManagement /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/reports" element={<ProtectedRoute><ReportsAnalytics /></ProtectedRoute>} />
+        <Route path="/statements" element={<ProtectedRoute><Statements /></ProtectedRoute>} />
+        <Route path="/help" element={<ProtectedRoute><HelpSupport /></ProtectedRoute>} />
 
         {/* Admin routes */}
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute requiredRole={UserRole.ADMIN}>
-              <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/client-onboarding"
-          element={
-            <ProtectedRoute requiredRole={UserRole.ADMIN}>
-              <ClientAccountOpening />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/users"
-          element={
-            <ProtectedRoute requiredRole={UserRole.ADMIN}>
-              <ManageUsers />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/password-resets"
-          element={
-            <ProtectedRoute requiredRole={UserRole.ADMIN}>
-              <ManagePasswordResets />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/accounts"
-          element={
-            <ProtectedRoute requiredRole={UserRole.ADMIN}>
-              <ManageAccounts />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/deposits"
-          element={
-            <ProtectedRoute requiredRole={UserRole.ADMIN}>
-              <ManageDeposits />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/withdrawals"
-          element={
-            <ProtectedRoute requiredRole={UserRole.ADMIN}>
-              <ManageWithdrawals />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/transactions"
-          element={
-            <ProtectedRoute requiredRole={UserRole.ADMIN}>
-              <ManageTransactions />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/support"
-          element={
-            <ProtectedRoute requiredRole={UserRole.ADMIN}>
-              <ManageSupportRequests />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/faqs"
-          element={
-            <ProtectedRoute requiredRole={UserRole.ADMIN}>
-              <ManageFAQs />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/countries"
-          element={
-            <ProtectedRoute requiredRole={UserRole.ADMIN}>
-              <ManageCountries />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/analytics"
-          element={
-            <ProtectedRoute requiredRole={UserRole.ADMIN}>
-              <AdminAnalytics />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/settings"
-          element={
-            <ProtectedRoute requiredRole={UserRole.SUPER_ADMIN}>
-              <SystemSettings />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/client-onboarding" element={<ProtectedRoute adminOnly><ClientAccountOpening /></ProtectedRoute>} />
+        <Route path="/admin/users" element={<ProtectedRoute adminOnly><ManageUsers /></ProtectedRoute>} />
+        <Route path="/admin/password-resets" element={<ProtectedRoute adminOnly><ManagePasswordResets /></ProtectedRoute>} />
+        <Route path="/admin/accounts" element={<ProtectedRoute adminOnly><ManageAccounts /></ProtectedRoute>} />
+        <Route path="/admin/deposits" element={<ProtectedRoute adminOnly><ManageDeposits /></ProtectedRoute>} />
+        <Route path="/admin/withdrawals" element={<ProtectedRoute adminOnly><ManageWithdrawals /></ProtectedRoute>} />
+        <Route path="/admin/transactions" element={<ProtectedRoute adminOnly><ManageTransactions /></ProtectedRoute>} />
+        <Route path="/admin/support" element={<ProtectedRoute adminOnly><ManageSupportRequests /></ProtectedRoute>} />
+        <Route path="/admin/faqs" element={<ProtectedRoute adminOnly><ManageFAQs /></ProtectedRoute>} />
+        <Route path="/admin/countries" element={<ProtectedRoute adminOnly><ManageCountries /></ProtectedRoute>} />
+        <Route path="/admin/analytics" element={<ProtectedRoute adminOnly><AdminAnalytics /></ProtectedRoute>} />
+        <Route path="/admin/settings" element={<ProtectedRoute adminOnly><SystemSettings /></ProtectedRoute>} />
 
-        {/* Default redirect to admin access - bank staff entrance */}
-        <Route path="/" element={<Navigate to="/admin-access" replace />} />
-        
-        {/* 404 fallback */}
-        <Route path="*" element={<Navigate to="/admin-access" replace />} />
+        {/* Default redirects */}
+        <Route path="/" element={<Navigate to="/client-login" replace />} />
+        <Route path="*" element={<Navigate to="/client-login" replace />} />
       </Routes>
     </div>
   );
 }
 
 function App() {
-  if (isSafeguardMode) {
-    return (
-      <ErrorBoundary>
-        <Router>
-          <SafeguardApp />
-        </Router>
-      </ErrorBoundary>
-    );
-  }
-
   return (
     <ErrorBoundary>
       <Router>
@@ -384,24 +131,9 @@ function App() {
               position="top-right"
               toastOptions={{
                 duration: 4000,
-                style: {
-                  background: '#363636',
-                  color: '#fff',
-                },
-                success: {
-                  duration: 3000,
-                  iconTheme: {
-                    primary: '#10B981',
-                    secondary: '#fff',
-                  },
-                },
-                error: {
-                  duration: 5000,
-                  iconTheme: {
-                    primary: '#EF4444',
-                    secondary: '#fff',
-                  },
-                },
+                style: { background: '#363636', color: '#fff' },
+                success: { duration: 3000, iconTheme: { primary: '#10B981', secondary: '#fff' } },
+                error: { duration: 5000, iconTheme: { primary: '#EF4444', secondary: '#fff' } },
               }}
             />
           </SystemConfigProvider>

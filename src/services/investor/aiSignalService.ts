@@ -1,6 +1,4 @@
-import { httpsCallable } from 'firebase/functions';
-import { collection, getDocs, orderBy, query, where, type DocumentData } from 'firebase/firestore';
-import { functions, db } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 import { LIVE_COLLECTIONS } from '../../config/liveCollections';
 
 export interface AiSignalIndicators {
@@ -22,13 +20,11 @@ export interface AiSignal {
   createdAt?: Date;
 }
 
-const generateFn = httpsCallable<{ symbol: string }, AiSignal>(functions, 'generateTradingSignal');
-
 export async function generateSignal(_symbol: string): Promise<AiSignal> {
   throw new Error('Live signals are paused.');
 }
 
-function mapSignal(id: string, data: DocumentData): AiSignal {
+function mapSignal(id: string, data: any): AiSignal {
   return {
     id,
     symbol: data.symbol ?? '',
@@ -37,13 +33,16 @@ function mapSignal(id: string, data: DocumentData): AiSignal {
     rationale: data.rationale ?? '',
     indicatorSummary: data.indicatorSummary ?? '',
     indicators: data.indicators ?? { sma20: null, sma50: null, rsi14: null, macd: null, lastClose: 0 },
-    createdAt: data.createdAt?.toDate?.(),
+    createdAt: data.created_at ? new Date(data.created_at) : undefined,
   };
 }
 
 export async function getSignalHistoryForUser(userId: string): Promise<AiSignal[]> {
-  const snap = await getDocs(
-    query(collection(db, LIVE_COLLECTIONS.aiSignals), where('userId', '==', userId), orderBy('createdAt', 'desc')),
-  );
-  return snap.docs.map((d) => mapSignal(d.id, d.data()));
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.aiSignals)
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error || !data) return [];
+  return data.map((d) => mapSignal(d.id, d));
 }

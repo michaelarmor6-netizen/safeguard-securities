@@ -55,17 +55,17 @@ const AdminUserCreator: React.FC = () => {
       <form onSubmit={handleCreateAdmin} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            User ID (Firebase UID)
+            User ID (Supabase UID)
           </label>
           <Input
             type="text"
             value={userId}
             onChange={(e) => setUserId(e.target.value)}
-            placeholder="Enter Firebase User ID"
+            placeholder="Enter Supabase User ID"
             required
           />
           <p className="text-xs text-gray-500 mt-1">
-            You can find the User ID in the browser console after login or in Firebase Auth console
+            You can find the User ID in the browser console after login or in Supabase Auth
           </p>
         </div>
         

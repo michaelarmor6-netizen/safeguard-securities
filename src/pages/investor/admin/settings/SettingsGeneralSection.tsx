@@ -40,7 +40,7 @@ function DataResetPanel() {
     setDeleting(true);
     try {
       const count = await executeDataReset(preview.toRemove.map((p) => p.id));
-      if (user) logAction(user.uid, profile?.email ?? '', 'Data reset executed', `${count} mock/incomplete profiles removed`);
+      if (user) logAction(user.id, profile?.email ?? '', 'Data reset executed', `${count} mock/incomplete profiles removed`);
       toast.success(`${count} profile${count === 1 ? '' : 's'} removed`);
       setConfirmText('');
       runPreview();
@@ -152,7 +152,7 @@ export default function SettingsGeneralSection() {
         statementFooterText: form.statementFooterText.trim(),
         deskTimezone: form.deskTimezone,
       });
-      if (user) logAction(user.uid, profile?.email ?? '', 'Platform identity updated', form.platformName.trim());
+      if (user) logAction(user.id, profile?.email ?? '', 'Platform identity updated', form.platformName.trim());
       toast.success('Saved');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save');

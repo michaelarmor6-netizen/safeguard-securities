@@ -4,25 +4,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import ContactSupportModal from '../../components/modals/ContactSupportModal';
-import { db } from '../../config/firebase';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
-import { 
-  MessageCircle, 
-  Phone, 
-  Mail, 
-  Search,
-  ChevronRight,
-  HelpCircle,
-  Shield,
-  CreditCard,
-  RefreshCw,
-  FileText,
-  Users,
-  Clock,
-  CheckCircle,
-  AlertTriangle,
-  Info
-} from 'lucide-react';
+import { supabase } from '../../config/supabase';
 
 interface FAQ {
   id: string;
@@ -41,44 +23,59 @@ const HelpSupport: React.FC = () => {
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load FAQs from Firestore
+  // Load FAQs from Supabase
   useEffect(() => {
-    const q = query(
-      collection(db, 'faqs'),
-      where('isActive', '==', true),
-      orderBy('order', 'asc'),
-      orderBy('question', 'asc')
-    );
+    const channel = supabase
+      .channel('faqs-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'faqs',
+          filter: 'is_active=eq.true',
+        },
+        () => {
+          loadFaqs();
+        },
+      )
+      .subscribe();
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const faqsData: FAQ[] = [];
-      snapshot.forEach((doc) => {
-        faqsData.push({
-          id: doc.id,
-          ...doc.data()
-        } as FAQ);
-      });
-      setFaqs(faqsData);
-      setLoading(false);
-    }, (error) => {
-      console.error('Error fetching FAQs:', error);
-      // Fallback: use empty array if collection doesn't exist
-      setFaqs([]);
-      setLoading(false);
-    });
+    loadFaqs();
 
-    return () => unsubscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
+  const loadFaqs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('faqs')
+        .select('*')
+        .eq('is_active', true)
+        .order('order', { ascending: true })
+        .order('question', { ascending: true });
+      if (error) throw error;
+      setFaqs((data ?? []) as FAQ[]);
+    } catch (error) {
+      console.error('Error fetching FAQs:', error);
+      // Fallback: use empty array if table doesn't exist
+      setFaqs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const categories = [
-    { id: 'all', name: 'All Topics', icon: HelpCircle },
-    { id: 'account', name: 'Account Management', icon: Users },
-    { id: 'transfers', name: 'Transfers & Payments', icon: RefreshCw },
-    { id: 'security', name: 'Security', icon: Shield },
-    { id: 'fees', name: 'Fees & Charges', icon: CreditCard },
-    { id: 'mobile', name: 'Mobile Banking', icon: Phone },
-    { id: 'deposits', name: 'Deposits & Withdrawals', icon: FileText },
-    { id: 'support', name: 'Customer Service', icon: MessageCircle }
+    { id: 'all', name: 'All Topics', icon: 'HelpCircle' },
+    { id: 'account', name: 'Account Management', icon: 'Users' },
+    { id: 'transfers', name: 'Transfers & Payments', icon: 'RefreshCw' },
+    { id: 'security', name: 'Security', icon: 'Shield' },
+    { id: 'fees', name: 'Fees & Charges', icon: 'CreditCard' },
+    { id: 'mobile', name: 'Mobile Banking', icon: 'Phone' },
+    { id: 'deposits', name: 'Deposits & Withdrawals', icon: 'FileText' },
+    { id: 'support', name: 'Customer Service', icon: 'MessageCircle' }
   ];
 
   const filteredFAQs = faqs.filter(faq => {
@@ -88,11 +85,9 @@ const HelpSupport: React.FC = () => {
     return matchesCategory && matchesSearch;
   });
 
-
-
   return (
-    <DashboardLayout 
-      title="Help & Support" 
+    <DashboardLayout
+      title="Help & Support"
       subtitle="Get help and find answers to your questions"
     >
       <div className="space-y-6">
@@ -100,11 +95,11 @@ const HelpSupport: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="p-6 text-center hover:shadow-lg transition-shadow cursor-pointer">
             <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <MessageCircle className="h-6 w-6 text-blue-600" />
+              <span className="text-2xl">💬</span>
             </div>
             <h3 className="font-semibold text-gray-900 mb-2">Live Chat</h3>
             <p className="text-sm text-gray-600 mb-4">Chat with our support team in real-time</p>
-            <Button 
+            <Button
               className="w-full"
               onClick={() => {
                 setSelectedContactMethod('chat');
@@ -118,12 +113,12 @@ const HelpSupport: React.FC = () => {
 
           <Card className="p-6 text-center hover:shadow-lg transition-shadow cursor-pointer">
             <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Phone className="h-6 w-6 text-green-600" />
+              <span className="text-2xl">📞</span>
             </div>
             <h3 className="font-semibold text-gray-900 mb-2">Phone Support</h3>
             <p className="text-sm text-gray-600 mb-4">Speak directly with a support representative</p>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full"
               onClick={() => {
                 setSelectedContactMethod('phone');
@@ -137,12 +132,12 @@ const HelpSupport: React.FC = () => {
 
           <Card className="p-6 text-center hover:shadow-lg transition-shadow cursor-pointer">
             <div className="h-12 w-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Mail className="h-6 w-6 text-purple-600" />
+              <span className="text-2xl">📧</span>
             </div>
             <h3 className="font-semibold text-gray-900 mb-2">Email Support</h3>
             <p className="text-sm text-gray-600 mb-4">Send us a detailed message</p>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full"
               onClick={() => {
                 setSelectedContactMethod('email');
@@ -161,7 +156,7 @@ const HelpSupport: React.FC = () => {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Frequently Asked Questions</h3>
             <div className="flex flex-col lg:flex-row gap-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
                 <input
                   type="text"
                   placeholder="Search for help..."
@@ -179,13 +174,8 @@ const HelpSupport: React.FC = () => {
               <button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
-                className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  selectedCategory === category.id
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+                className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedCategory === category.id ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
               >
-                <category.icon className="w-4 h-4 mr-2" />
                 {category.name}
               </button>
             ))}
@@ -200,10 +190,10 @@ const HelpSupport: React.FC = () => {
               </div>
             ) : filteredFAQs.length === 0 ? (
               <div className="text-center py-8">
-                <HelpCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <span className="text-4xl text-gray-300 mx-auto mb-4">❓</span>
                 <p className="text-gray-500">
-                  {faqs.length === 0 
-                    ? "No FAQs available. Please contact support for assistance." 
+                  {faqs.length === 0
+                    ? "No FAQs available. Please contact support for assistance."
                     : "No FAQs found matching your search"}
                 </p>
                 {searchQuery && (
@@ -217,7 +207,7 @@ const HelpSupport: React.FC = () => {
                 <details key={faq.id} className="group border border-gray-200 rounded-lg">
                   <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50">
                     <span className="font-medium text-gray-900">{faq.question}</span>
-                    <ChevronRight className="w-5 h-5 text-gray-400 group-open:rotate-90 transition-transform" />
+                    <span className="w-5 h-5 text-gray-400">▶</span>
                   </summary>
                   <div className="px-4 pb-4 text-gray-600 text-sm leading-relaxed">
                     {faq.answer}
@@ -235,19 +225,19 @@ const HelpSupport: React.FC = () => {
             <p className="text-gray-600 mb-6">
               Can't find what you're looking for? Our support team is here to help you with any questions or concerns.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
+              <Button
                 onClick={() => {
                   setSelectedContactMethod('general');
                   setContactModalOpen(true);
                 }}
                 className="px-8 py-3"
               >
-                <MessageCircle className="w-4 h-4 mr-2" />
+                <span className="w-4 h-4 mr-2">💬</span>
                 Contact Support
               </Button>
-              <Button 
+              <Button
                 variant="outline"
                 onClick={() => {
                   setSelectedContactMethod('urgent');
@@ -255,11 +245,11 @@ const HelpSupport: React.FC = () => {
                 }}
                 className="px-8 py-3"
               >
-                <AlertTriangle className="w-4 h-4 mr-2" />
+                <span className="w-4 h-4 mr-2">⚠️</span>
                 Urgent Issue
               </Button>
             </div>
-            
+
             <p className="text-sm text-gray-500 mt-4">
               Average response time: 2 hours for urgent issues, 24 hours for general inquiries
             </p>
@@ -274,37 +264,31 @@ const HelpSupport: React.FC = () => {
               {
                 title: 'User Guide',
                 description: 'Complete guide to using our banking platform',
-                icon: FileText,
                 link: '#'
               },
               {
                 title: 'Security Center',
                 description: 'Learn about keeping your account secure',
-                icon: Shield,
                 link: '#'
               },
               {
                 title: 'Mobile App Guide',
                 description: 'How to use our mobile banking app',
-                icon: Phone,
                 link: '#'
               },
               {
                 title: 'Fee Schedule',
                 description: 'Complete list of fees and charges',
-                icon: CreditCard,
                 link: '#'
               },
               {
                 title: 'Service Status',
                 description: 'Check current system status and outages',
-                icon: CheckCircle,
                 link: '#'
               },
               {
                 title: 'Video Tutorials',
                 description: 'Step-by-step video guides',
-                icon: Users,
                 link: '#'
               },
             ].map((resource) => (
@@ -314,7 +298,7 @@ const HelpSupport: React.FC = () => {
                 className="block p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-sm transition-all"
               >
                 <div className="flex items-center mb-3">
-                  <resource.icon className="h-5 w-5 text-blue-600 mr-3" />
+                  <span className="w-5 h-5 text-blue-600 mr-2">📄</span>
                   <h4 className="font-medium text-gray-900">{resource.title}</h4>
                 </div>
                 <p className="text-sm text-gray-600">{resource.description}</p>

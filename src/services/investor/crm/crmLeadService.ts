@@ -1,34 +1,30 @@
 // The lead store. After wallets, this becomes the most sensitive collection
 // in the app - it is names, numbers and consent records for people who have
-// not signed up for anything. Staff-only by Firestore rule, and every bulk
+// not signed up for anything. Staff-only by RLS, and every bulk
 // exit (Vicidial CSV, campaigns later) goes through the audit log.
-import {
-  collection, deleteDoc, doc, getDocs, limit as fsLimit, orderBy, query,
-  serverTimestamp, updateDoc, where, writeBatch, type DocumentData,
-} from 'firebase/firestore';
-import { db } from '../../../config/firebase';
+import { supabase, nowISO } from '../../../config/supabase';
 import { LIVE_COLLECTIONS } from '../../../config/liveCollections';
 import type { ConsentBasis, CrmLead, CrmLeadSource, CrmLeadStatus, ReviewRow } from './crmTypes';
 
-function mapLead(id: string, data: DocumentData): CrmLead {
+function mapLead(id: string, data: any): CrmLead {
   return {
     id,
-    firstName: data.firstName ?? '',
-    lastName: data.lastName ?? '',
+    firstName: data.first_name ?? data.firstName ?? '',
+    lastName: data.last_name ?? data.lastName ?? '',
     company: data.company ?? undefined,
-    phoneE164: data.phoneE164 ?? undefined,
+    phoneE164: data.phone_e164 ?? data.phoneE164 ?? undefined,
     email: data.email ?? undefined,
     country: data.country ?? undefined,
     tags: Array.isArray(data.tags) ? data.tags : [],
     status: (data.status ?? 'new') as CrmLeadStatus,
     source: data.source ?? { kind: 'manual' },
-    consentBasis: (data.consentBasis ?? 'unknown') as ConsentBasis,
-    consentNote: data.consentNote ?? undefined,
-    giLeadId: data.giLeadId ?? undefined,
+    consentBasis: (data.consent_basis ?? data.consentBasis ?? 'unknown') as ConsentBasis,
+    consentNote: data.consent_note ?? data.consentNote ?? undefined,
+    giLeadId: data.gi_lead_id ?? data.giLeadId ?? undefined,
     notes: data.notes ?? undefined,
-    createdAt: data.createdAt?.toDate?.(),
-    updatedAt: data.updatedAt?.toDate?.(),
-    lastExportedAt: data.lastExportedAt?.toDate?.(),
+    createdAt: data.created_at ? new Date(data.created_at) : undefined,
+    updatedAt: data.updated_at ? new Date(data.updated_at) : undefined,
+    lastExportedAt: data.last_exported_at ? new Date(data.last_exported_at) : undefined,
   };
 }
 
@@ -41,16 +37,17 @@ export interface LeadFilter {
   search?: string; // client-side substring match on name/company/email/phone
 }
 
-// Firestore composite-index appetite is kept deliberately small: one ordered
-// scan (bounded) + client-side filtering. At CRM volumes (thousands, not GI
-// millions - that line is drawn in the plan) this is simpler and fast enough.
+// RLS keeps reads staff-only; composite-index appetite is kept small: one
+// ordered scan (bounded) + client-side filtering. At CRM volumes this is
+// simpler and fast enough.
 export async function listLeads(filter: LeadFilter = {}, max = 2000): Promise<CrmLead[]> {
-  const snap = await getDocs(query(
-    collection(db, LIVE_COLLECTIONS.crmLeads),
-    orderBy('createdAt', 'desc'),
-    fsLimit(max),
-  ));
-  let leads = snap.docs.map((d) => mapLead(d.id, d.data()));
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.crmLeads)
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(max);
+  if (error || !data) return [];
+  let leads = data.map((d) => mapLead(d.id, d));
   if (filter.status) leads = leads.filter((l) => l.status === filter.status);
   if (filter.consentBasis) leads = leads.filter((l) => l.consentBasis === filter.consentBasis);
   if (filter.tag) leads = leads.filter((l) => l.tags.includes(filter.tag!));
@@ -66,18 +63,18 @@ export async function listLeads(filter: LeadFilter = {}, max = 2000): Promise<Cr
 
 // Which of these phones/emails already exist in the store? Returns value ->
 // existing lead id. Used by the review grid so duplicates are decided by a
-// person, not silently merged.
+// person, not silently merged. Supabase 'in' caps at ~30 values, so we chunk.
 export async function findExisting(phones: string[], emails: string[]): Promise<Map<string, string>> {
   const found = new Map<string, string>();
-  const lookup = async (field: 'phoneE164' | 'email', values: string[]) => {
+  const lookup = async (field: 'phone_e164' | 'email', values: string[]) => {
     const unique = [...new Set(values.filter(Boolean))];
     for (let i = 0; i < unique.length; i += 30) {
       const chunk = unique.slice(i, i + 30);
-      const snap = await getDocs(query(collection(db, LIVE_COLLECTIONS.crmLeads), where(field, 'in', chunk)));
-      snap.docs.forEach((d) => found.set(d.data()[field], d.id));
+      const { data } = await supabase.from(LIVE_COLLECTIONS.crmLeads).select(`${field}, id`).in(field, chunk);
+      (data ?? []).forEach((d: any) => found.set(d[field], d.id));
     }
   };
-  await lookup('phoneE164', phones);
+  await lookup('phone_e164', phones);
   await lookup('email', emails);
   return found;
 }
@@ -92,45 +89,42 @@ export async function commitLeads(
 ): Promise<number> {
   const eligible = rows.filter((r) =>
     r.include && !r.suppressed && !r.duplicateOfLeadId && !r.duplicateInBatch && r.problems.length === 0);
-  // Firestore batch cap is 500 writes.
+  // Insert in chunks (no server-side batch; individual inserts are fine at CRM
+  // volumes, chunked to keep each request small).
   for (let i = 0; i < eligible.length; i += 450) {
-    const batch = writeBatch(db);
-    for (const r of eligible.slice(i, i + 450)) {
-      const ref = doc(collection(db, LIVE_COLLECTIONS.crmLeads));
-      batch.set(ref, {
-        firstName: r.firstName,
-        lastName: r.lastName,
+    const chunk = eligible.slice(i, i + 450);
+    await supabase.from(LIVE_COLLECTIONS.crmLeads).insert(
+      chunk.map((r) => ({
+        first_name: r.firstName,
+        last_name: r.lastName,
         company: r.company ?? null,
-        phoneE164: r.phoneE164 ?? null,
+        phone_e164: r.phoneE164 ?? null,
         email: r.email ?? null,
         country: r.country ?? null,
         tags: r.tags,
         status: 'new',
         source,
-        consentBasis,
+        consent_basis: consentBasis,
         notes: r.notes ?? null,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-    }
-    await batch.commit();
+        created_at: nowISO(),
+        updated_at: nowISO(),
+      })),
+    );
   }
   return eligible.length;
 }
 
 export async function updateLead(id: string, patch: Partial<Pick<CrmLead, 'status' | 'tags' | 'notes' | 'consentNote'>>): Promise<void> {
-  await updateDoc(doc(db, LIVE_COLLECTIONS.crmLeads, id), { ...patch, updatedAt: serverTimestamp() });
+  await supabase.from(LIVE_COLLECTIONS.crmLeads).update({ ...patch, updated_at: nowISO() }).eq('id', id);
 }
 
 export async function deleteLead(id: string): Promise<void> {
-  await deleteDoc(doc(db, LIVE_COLLECTIONS.crmLeads, id));
+  await supabase.from(LIVE_COLLECTIONS.crmLeads).delete().eq('id', id);
 }
 
 export async function markExported(ids: string[]): Promise<void> {
   for (let i = 0; i < ids.length; i += 450) {
-    const batch = writeBatch(db);
-    ids.slice(i, i + 450).forEach((id) =>
-      batch.update(doc(db, LIVE_COLLECTIONS.crmLeads, id), { lastExportedAt: serverTimestamp() }));
-    await batch.commit();
+    const chunk = ids.slice(i, i + 450);
+    await supabase.from(LIVE_COLLECTIONS.crmLeads).update({ last_exported_at: nowISO() }).in('id', chunk);
   }
 }

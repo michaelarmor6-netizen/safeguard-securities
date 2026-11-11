@@ -29,7 +29,7 @@ export default function SettingsAppearanceSection() {
       });
       document.documentElement.style.setProperty('--sg-indigo', form.brandPrimaryColor);
       document.documentElement.style.setProperty('--sg-teal', form.brandAccentColor);
-      if (user) logAction(user.uid, profile?.email ?? '', 'Branding updated', `primary ${form.brandPrimaryColor}, accent ${form.brandAccentColor}`);
+      if (user) logAction(user.id, profile?.email ?? '', 'Branding updated', `primary ${form.brandPrimaryColor}, accent ${form.brandAccentColor}`);
       toast.success('Branding saved — colors applied immediately, all users see them on next load.');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save');

@@ -1,5 +1,4 @@
-import { addDoc, collection, getDocs, orderBy, query, where, type DocumentData } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase, nowISO } from '../../config/supabase';
 import { LIVE_COLLECTIONS } from '../../config/liveCollections';
 
 export type OrderStatus = 'pending' | 'working' | 'partially_filled' | 'filled' | 'cancelled' | 'rejected' | 'expired';
@@ -38,7 +37,7 @@ export interface InvestorOrder {
   cancelledAt?: Date;
 }
 
-function mapOrder(id: string, data: DocumentData): InvestorOrder {
+function mapOrder(id: string, data: any): InvestorOrder {
   const limitPrice = data.limitPrice != null ? Number(data.limitPrice) : undefined;
   const avgFillPrice = data.avgFillPrice != null ? Number(data.avgFillPrice) : undefined;
   return {
@@ -68,15 +67,19 @@ function mapOrder(id: string, data: DocumentData): InvestorOrder {
     fees: data.fees != null ? Number(data.fees) : undefined,
     commission: data.commission != null ? Number(data.commission) : undefined,
     subPortfolioId: data.subPortfolioId ?? undefined,
-    createdAt: data.createdAt?.toDate?.(),
-    filledAt: data.filledAt?.toDate?.(),
-    cancelledAt: data.cancelledAt?.toDate?.(),
+    createdAt: data.createdAt ? new Date(data.createdAt) : undefined,
+    filledAt: data.filledAt ? new Date(data.filledAt) : undefined,
+    cancelledAt: data.cancelledAt ? new Date(data.cancelledAt) : undefined,
   };
 }
 
 export async function getAllOrders(): Promise<InvestorOrder[]> {
-  const snap = await getDocs(query(collection(db, LIVE_COLLECTIONS.orders), orderBy('createdAt', 'desc')));
-  return snap.docs.map((d) => mapOrder(d.id, d.data()));
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.orders)
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error || !data) return [];
+  return data.map((d) => mapOrder(d.id, d));
 }
 
 export async function getPendingOrders() {
@@ -84,10 +87,13 @@ export async function getPendingOrders() {
 }
 
 export async function getOrdersForUser(userId: string): Promise<InvestorOrder[]> {
-  const snap = await getDocs(
-    query(collection(db, LIVE_COLLECTIONS.orders), where('userId', '==', userId), orderBy('createdAt', 'desc')),
-  );
-  return snap.docs.map((d) => mapOrder(d.id, d.data()));
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.orders)
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error || !data) return [];
+  return data.map((d) => mapOrder(d.id, d));
 }
 
 // Self-service order submission (Trade Desk quick order, AI Engine "place
@@ -108,27 +114,28 @@ export async function createOrder(
   const upperSymbol = symbol.toUpperCase();
   let assetId: string | null = null;
   try {
-    const assetSnap = await getDocs(
-      query(collection(db, LIVE_COLLECTIONS.assets), where('symbol', '==', upperSymbol)),
-    );
-    if (!assetSnap.empty) assetId = assetSnap.docs[0].id;
+    const { data: assetSnap } = await supabase
+      .from(LIVE_COLLECTIONS.assets)
+      .select('*')
+      .eq('symbol', upperSymbol);
+    if (assetSnap && assetSnap.length > 0) assetId = assetSnap[0].id;
   } catch {
     // Catalog lookup is best-effort - a freeform symbol with no catalog
     // match is still a valid self-submitted order.
   }
 
-  return addDoc(collection(db, LIVE_COLLECTIONS.orders), {
-    userId,
-    userEmail,
-    assetId,
+  return supabase.from(LIVE_COLLECTIONS.orders).insert({
+    user_id: userId,
+    user_email: userEmail,
+    asset_id: assetId,
     symbol: upperSymbol,
     side,
-    orderType: 'market',
-    timeInForce: 'day',
+    order_type: 'market',
+    time_in_force: 'day',
     quantity,
     status: 'pending',
-    filledQuantity: 0,
-    clientStatus: 'pending',
-    createdAt: new Date(),
+    filled_quantity: 0,
+    client_status: 'pending',
+    created_at: nowISO(),
   });
 }

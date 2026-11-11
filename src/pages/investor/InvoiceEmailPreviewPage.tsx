@@ -184,7 +184,7 @@ export default function InvoiceEmailPreviewPage() {
                 onClick={async () => {
                   try {
                     await markInvoiceEmailSent(invoice.id);
-                    if (user) logAction(user.uid, profile?.email ?? '', 'Invoice emailed manually', `${invoice.billToEmail}: ${invoice.number}`);
+                    if (user) logAction(user.id, profile?.email ?? '', 'Invoice emailed manually', `${invoice.billToEmail}: ${invoice.number}`);
                     toast.success('Marked as emailed');
                     setInvoice({ ...invoice, emailSentAt: new Date(), status: 'sent' });
                   } catch (e) {

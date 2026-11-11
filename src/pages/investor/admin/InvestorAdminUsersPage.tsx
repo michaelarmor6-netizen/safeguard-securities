@@ -76,7 +76,7 @@ function AccountManagerCell({ user, onSaved }: { user: InvestorProfile; onSaved:
     setSaving(true);
     try {
       await updateInvestorProfile(user.id, { accountManager: { name: name.trim(), email: email.trim() } });
-      if (adminUser) logAction(adminUser.uid, adminProfile?.email ?? '', 'Account manager assigned', `${user.email}: ${name.trim()}`);
+      if (adminUser) logAction(adminUser.id, adminProfile?.email ?? '', 'Account manager assigned', `${user.email}: ${name.trim()}`);
       toast.success('Account manager updated');
       setEditing(false);
       onSaved();
@@ -258,7 +258,7 @@ export default function InvestorAdminUsersPage() {
                       const newRole = e.target.value as InvestorRole;
                       try {
                         await updateInvestorProfile(u.id, { role: newRole });
-                        if (user) logAction(user.uid, adminProfile?.email ?? '', 'Role changed', `${u.email}: ${u.role} → ${newRole}`);
+                        if (user) logAction(user.id, adminProfile?.email ?? '', 'Role changed', `${u.email}: ${u.role} → ${newRole}`);
                         toast.success('Role updated');
                         load();
                       } catch (err) {
@@ -279,7 +279,7 @@ export default function InvestorAdminUsersPage() {
                       const newStatus = e.target.value as AccountStatus;
                       try {
                         await updateInvestorProfile(u.id, { accountStatus: newStatus });
-                        if (user) logAction(user.uid, adminProfile?.email ?? '', 'Status changed', `${u.email}: ${u.accountStatus} → ${newStatus}`);
+                        if (user) logAction(user.id, adminProfile?.email ?? '', 'Status changed', `${u.email}: ${u.accountStatus} → ${newStatus}`);
                         toast.success('Status updated');
                         load();
                       } catch (err) {
@@ -301,7 +301,7 @@ export default function InvestorAdminUsersPage() {
                       const newTier = e.target.value as InvestorTier;
                       try {
                         await updateInvestorProfile(u.id, { investorTier: newTier });
-                        if (user) logAction(user.uid, adminProfile?.email ?? '', 'Investor tier changed', `${u.email}: ${u.investorTier ?? 'standard'} → ${newTier}`);
+                        if (user) logAction(user.id, adminProfile?.email ?? '', 'Investor tier changed', `${u.email}: ${u.investorTier ?? 'standard'} → ${newTier}`);
                         toast.success('Tier updated');
                         load();
                       } catch (err) {
@@ -323,7 +323,7 @@ export default function InvestorAdminUsersPage() {
                       const prevPlan = u.plan ?? 'free';
                       try {
                         await setPlanForUser(u.id, newPlan);
-                        if (user) logAction(user.uid, adminProfile?.email ?? '', 'Plan changed', `${u.email}: ${prevPlan} → ${newPlan}`);
+                        if (user) logAction(user.id, adminProfile?.email ?? '', 'Plan changed', `${u.email}: ${prevPlan} → ${newPlan}`);
 
                         // Close any outstanding request from this client so it
                         // stops showing as pending once we have acted on it.
@@ -383,7 +383,7 @@ export default function InvestorAdminUsersPage() {
                       if (!ok) return;
                       try {
                         await deleteInvestorProfile(u.id);
-                        if (user) logAction(user.uid, adminProfile?.email ?? '', 'Profile deleted', `${u.email} (${u.id})`);
+                        if (user) logAction(user.id, adminProfile?.email ?? '', 'Profile deleted', `${u.email} (${u.id})`);
                         toast.success('Profile deleted');
                         load();
                       } catch (err) {

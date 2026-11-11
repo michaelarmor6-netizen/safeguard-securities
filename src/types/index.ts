@@ -1,5 +1,3 @@
-import { Timestamp } from 'firebase/firestore';
-
 // User roles
 export const UserRole = {
   CLIENT: 'client',
@@ -77,10 +75,10 @@ export interface User {
   emailVerified: boolean;
   twoFactorEnabled: boolean;
   profileImageUrl?: string;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt: Date;
+  updatedAt: Date;
   isActive: boolean;
-  lastLoginAt?: Timestamp;
+  lastLoginAt?: Date;
 }
 
 // Account interface
@@ -92,8 +90,8 @@ export interface Account {
   balance: number;
   currency: string;
   isActive: boolean;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Transaction interface
@@ -109,8 +107,8 @@ export interface Transaction {
   description: string;
   reference: string;
   metadata?: Record<string, any>;
-  createdAt: Timestamp;
-  completedAt?: Timestamp;
+  createdAt: Date;
+  completedAt?: Date;
   failureReason?: string;
 }
 
@@ -128,8 +126,8 @@ export interface FundRequest {
   bankDetails?: BankDetails;
   ewalletDetails?: EWalletDetails;
   documentUrl?: string;
-  requestedAt: Timestamp;
-  processedAt?: Timestamp;
+  requestedAt: Date;
+  processedAt?: Date;
   processedBy?: string;
   adminNotes?: string;
 }
@@ -159,8 +157,8 @@ export interface LinkedEWallet {
   isVerified: boolean;
   balance?: number;
   currency?: string;
-  linkedAt: Timestamp;
-  lastSyncAt?: Timestamp;
+  linkedAt: Date;
+  lastSyncAt?: Date;
 }
 
 // Deposit method interface
@@ -189,9 +187,9 @@ export interface OTPVerification {
   method: 'sms' | 'email';
   code: string;
   purpose: string;
-  expiresAt: Timestamp;
+  expiresAt: Date;
   isUsed: boolean;
-  createdAt: Timestamp;
+  createdAt: Date;
 }
 
 // Notification interface
@@ -202,8 +200,8 @@ export interface Notification {
   message: string;
   type: 'info' | 'success' | 'warning' | 'error';
   isRead: boolean;
-  createdAt: Timestamp;
-  readAt?: Timestamp;
+  createdAt: Date;
+  readAt?: Date;
 }
 
 // Analytics data interface

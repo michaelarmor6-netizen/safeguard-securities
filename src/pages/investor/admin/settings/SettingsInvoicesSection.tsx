@@ -67,7 +67,7 @@ export default function SettingsInvoicesSection() {
       setPrefix(cleanedPrefix);
       setPadLength(pad);
       setNextSequence(next);
-      if (user) logAction(user.uid, profile?.email ?? '', 'Invoice numbering updated', preview);
+      if (user) logAction(user.id, profile?.email ?? '', 'Invoice numbering updated', preview);
       toast.success(`Next invoice will be ${preview}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save');

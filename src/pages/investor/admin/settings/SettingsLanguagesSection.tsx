@@ -44,7 +44,7 @@ export default function SettingsLanguagesSection() {
     setSaving(true);
     try {
       await updatePlatformSettings({ defaultLanguage: form.defaultLanguage, supportedLanguages: form.supportedLanguages });
-      if (user) logAction(user.uid, profile?.email ?? '', 'Language settings updated', form.supportedLanguages.join(', '));
+      if (user) logAction(user.id, profile?.email ?? '', 'Language settings updated', form.supportedLanguages.join(', '));
       toast.success('Saved');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save');

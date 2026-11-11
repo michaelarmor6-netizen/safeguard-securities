@@ -2,9 +2,7 @@ import React, { useState } from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../../config/firebase';
+import { supabase, nowISO } from '../../config/supabase';
 import { UserRole } from '../../types';
 import toast from 'react-hot-toast';
 import { Shield, Wrench, Check, AlertTriangle } from 'lucide-react';
@@ -36,34 +34,36 @@ const SystemInitializer: React.FC = () => {
     setLoading(true);
     try {
       console.log('🚀 Creating admin user...');
-      
-      // 1. Create Firebase Auth user
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        adminData.email,
-        adminData.password
-      );
-      
-      console.log('✅ Firebase Auth user created:', userCredential.user.uid);
+
+      // 1. Create Supabase Auth user
+      const { data, error } = await supabase.auth.signUp({
+        email: adminData.email,
+        password: adminData.password,
+      });
+      if (error) throw error;
+      const user = data.user;
+      if (!user) throw new Error('No user returned');
+
+      console.log('✅ Supabase Auth user created:', user.id);
 
       // 2. Create admin user document
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
-        uid: userCredential.user.uid,
+      await supabase.from('users').insert({
+        id: user.id,
         email: adminData.email,
-        firstName: adminData.firstName,
-        lastName: adminData.lastName,
+        first_name: adminData.firstName,
+        last_name: adminData.lastName,
         role: UserRole.SUPER_ADMIN,
-        emailVerified: false,
-        twoFactorEnabled: false,
-        isActive: true,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        createdBy: 'system-initializer'
+        email_verified: false,
+        two_factor_enabled: false,
+        is_active: true,
+        created_at: nowISO(),
+        updated_at: nowISO(),
+        created_by: 'system-initializer'
       });
 
       console.log('✅ Admin user document created');
       toast.success('Admin user created successfully!');
-      
+
       setStep(2);
     } catch (error) {
       console.error('❌ Error creating admin:', error);
@@ -77,7 +77,7 @@ const SystemInitializer: React.FC = () => {
     setLoading(true);
     try {
       console.log('🚀 Initializing system configuration...');
-      
+
       // Default logo (simple SVG data URL)
       const defaultLogo = adminData.logoUrl || `data:image/svg+xml;base64,${btoa(`
         <svg width="200" height="60" xmlns="http://www.w3.org/2000/svg">
@@ -90,16 +90,16 @@ const SystemInitializer: React.FC = () => {
 
       const systemConfig = {
         id: 'main',
-        companyInfo: {
+        company_info: {
           name: adminData.companyName,
-          legalName: `${adminData.companyName} LLC`,
+          legal_name: `${adminData.companyName} LLC`,
           description: 'Digital banking platform providing secure financial services',
           tagline: 'Banking made simple and secure',
           website: 'https://yourbank.com',
           industry: 'Financial Services',
           timezone: 'UTC',
-          defaultCurrency: 'USD',
-          supportedCurrencies: ['USD', 'EUR', 'GBP']
+          default_currency: 'USD',
+          supported_currencies: ['USD', 'EUR', 'GBP']
         },
         branding: {
           logo: {
@@ -119,8 +119,8 @@ const SystemInitializer: React.FC = () => {
             text: '#1F2937'
           },
           typography: {
-            fontFamily: 'Inter, system-ui, sans-serif',
-            fontSize: {
+            font_family: 'Inter, system-ui, sans-serif',
+            font_size: {
               xs: '0.75rem',
               sm: '0.875rem',
               base: '1rem',
@@ -131,10 +131,10 @@ const SystemInitializer: React.FC = () => {
             }
           },
           layout: {
-            sidebarWidth: 256,
-            headerHeight: 64,
-            footerHeight: 48,
-            borderRadius: '0.5rem'
+            sidebar_width: 256,
+            header_height: 64,
+            footer_height: 48,
+            border_radius: '0.5rem'
           }
         },
         contact: {
@@ -152,10 +152,10 @@ const SystemInitializer: React.FC = () => {
             street: '123 Banking Street',
             city: 'Financial District',
             state: 'NY',
-            zipCode: '10001',
+            zip_code: '10001',
             country: 'United States'
           },
-          socialMedia: {
+          social_media: {
             facebook: '',
             twitter: '',
             linkedin: '',
@@ -163,38 +163,38 @@ const SystemInitializer: React.FC = () => {
           }
         },
         features: {
-          onlineBanking: true,
-          mobileApp: true,
-          billPay: true,
+          online_banking: true,
+          mobile_app: true,
+          bill_pay: true,
           transfers: true,
           deposits: true,
           loans: true,
           investments: false,
-          creditCards: false,
-          businessAccounts: true,
-          internationalTransfers: false,
-          cryptoCurrency: false,
-          bulkOperations: true
+          credit_cards: false,
+          business_accounts: true,
+          international_transfers: false,
+          crypto_currency: false,
+          bulk_operations: true
         },
         security: {
-          sessionTimeout: 30,
-          maxLoginAttempts: 5,
-          lockoutDuration: 15,
-          passwordPolicy: {
-            minLength: 8,
-            requireUppercase: true,
-            requireLowercase: true,
-            requireNumbers: true,
-            requireSpecialChars: true
+          session_timeout: 30,
+          max_login_attempts: 5,
+          lockout_duration: 15,
+          password_policy: {
+            min_length: 8,
+            require_uppercase: true,
+            require_lowercase: true,
+            require_numbers: true,
+            require_special_chars: true
           },
-          twoFactorAuth: {
+          two_factor_auth: {
             enforced: false,
             methods: ['email', 'sms']
           },
-          ipWhitelist: [],
-          rateLimiting: {
+          ip_whitelist: [],
+          rate_limiting: {
             enabled: true,
-            requestsPerMinute: 100
+            requests_per_minute: 100
           }
         },
         notifications: {
@@ -202,8 +202,8 @@ const SystemInitializer: React.FC = () => {
             enabled: true,
             templates: {
               welcome: true,
-              transactionAlert: true,
-              securityAlert: true,
+              transaction_alert: true,
+              security_alert: true,
               maintenance: false,
               newsletter: false
             }
@@ -211,22 +211,22 @@ const SystemInitializer: React.FC = () => {
           sms: {
             enabled: false,
             templates: {
-              twoFactorAuth: false,
-              transactionAlert: false,
-              securityAlert: false
+              two_factor_auth: false,
+              transaction_alert: false,
+              security_alert: false
             }
           },
           push: {
             enabled: false,
             templates: {
-              transactionAlert: false,
-              securityAlert: false,
+              transaction_alert: false,
+              security_alert: false,
               marketing: false
             }
           }
         },
-        supportEmailTemplates: {
-          accountOpening: {
+        support_email_templates: {
+          account_opening: {
             received: {
               subject: 'Account Application Received',
               message: 'Thank you for your interest in opening an account with us. We will review your application within 2-3 business days.'
@@ -235,7 +235,7 @@ const SystemInitializer: React.FC = () => {
               subject: 'Account Approved - Welcome!',
               message: 'Congratulations! Your account has been approved. You can now log in using your credentials.'
             },
-            requiresDocuments: {
+            requires_documents: {
               subject: 'Additional Documents Required',
               message: 'We need additional documentation to complete your account opening. Please log in to upload the required documents.'
             }
@@ -249,22 +249,22 @@ const SystemInitializer: React.FC = () => {
               subject: 'Support Request Resolved',
               message: 'Your support request has been resolved. Please contact us if you need further assistance.'
             },
-            followUp: {
+            follow_up: {
               subject: 'Following up on your Support Request',
               message: 'We wanted to follow up on your recent support request to ensure everything is working properly.'
             }
           }
         },
-        updatedAt: serverTimestamp(),
-        updatedBy: 'system-initializer',
+        updated_at: nowISO(),
+        updated_by: 'system-initializer',
         version: '1.0.0'
       };
 
-      await setDoc(doc(db, 'systemConfig', 'main'), systemConfig);
-      
+      await supabase.from('system_config').upsert(systemConfig);
+
       console.log('✅ System configuration saved');
       toast.success('System initialized successfully!');
-      
+
       setStep(3);
     } catch (error) {
       console.error('❌ Error initializing system:', error);
@@ -275,14 +275,14 @@ const SystemInitializer: React.FC = () => {
   };
 
   return (
-    <div style={{ 
-      position: 'fixed', 
-      top: '50%', 
-      left: '50%', 
+    <div style={{
+      position: 'fixed',
+      top: '50%',
+      left: '50%',
       transform: 'translate(-50%, -50%)',
-      background: 'white', 
-      border: '3px solid #3B82F6', 
-      padding: '30px', 
+      background: 'white',
+      border: '3px solid #3B82F6',
+      padding: '30px',
       borderRadius: '12px',
       maxWidth: '500px',
       width: '90vw',
@@ -340,7 +340,7 @@ const SystemInitializer: React.FC = () => {
               onChange={(e) => setAdminData(prev => ({ ...prev, confirmPassword: e.target.value }))}
               placeholder="Confirm Password"
             />
-            <Button 
+            <Button
               onClick={handleCreateAdmin}
               disabled={loading}
               className="w-full"
@@ -376,7 +376,7 @@ const SystemInitializer: React.FC = () => {
                 A default logo will be generated if no URL is provided
               </p>
             </div>
-            <Button 
+            <Button
               onClick={handleInitializeSystem}
               disabled={loading}
               className="w-full"
@@ -401,13 +401,13 @@ const SystemInitializer: React.FC = () => {
             </div>
           </div>
           <div className="space-y-2">
-            <Button 
+            <Button
               onClick={() => window.location.href = '/admin-access'}
               className="w-full"
             >
               Go to Admin Login
             </Button>
-            <Button 
+            <Button
               onClick={() => window.location.reload()}
               variant="outline"
               className="w-full"

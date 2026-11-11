@@ -20,7 +20,7 @@ export default function InvestorSupportPage() {
 
   const load = () => {
     if (!user) return;
-    getTicketsForUser(user.uid)
+    getTicketsForUser(user.id)
       .then(setTickets)
       .catch((e) => toast.error(e instanceof Error ? e.message : 'Failed to load support tickets'))
       .finally(() => setLoading(false));
@@ -36,7 +36,7 @@ export default function InvestorSupportPage() {
     }
     setSubmitting(true);
     try {
-      await createTicket(user.uid, profile?.email ?? user.email ?? '', subject.trim(), message.trim());
+      await createTicket(user.id, profile?.email ?? user.email ?? '', subject.trim(), message.trim());
       toast.success('Support ticket submitted');
       setSubject('');
       setMessage('');

@@ -45,7 +45,7 @@ export default function InvestorAdminKycPage() {
     setBusyId(row.id);
     try {
       await reviewIdentityDocument(row.id, decision, decision === 'rejected' ? notes : summary);
-      if (user) logAction(user.uid, adminProfile?.email ?? '', `KYC document ${decision}`, `${row.clientName} ${row.docType}`);
+      if (user) logAction(user.id, adminProfile?.email ?? '', `KYC document ${decision}`, `${row.clientName} ${row.docType}`);
       toast.success(decision === 'approved' ? 'Document approved' : 'Document rejected');
       setRejectingId(null);
       setNotes('');
@@ -61,7 +61,7 @@ export default function InvestorAdminKycPage() {
   const reviewLegacy = async (row: KycSubmission, status: 'verified' | 'rejected', summary?: string) => {
     try {
       await reviewKyc(row.id, status, summary);
-      if (user) logAction(user.uid, adminProfile?.email ?? '', `KYC ${status}`, row.userEmail ?? row.userId);
+      if (user) logAction(user.id, adminProfile?.email ?? '', `KYC ${status}`, row.userEmail ?? row.userId);
       toast.success(status === 'verified' ? 'Verified' : 'Rejected');
       setReport(null);
       load();

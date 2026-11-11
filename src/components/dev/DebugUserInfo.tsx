@@ -20,7 +20,7 @@ const DebugUserInfo: React.FC = () => {
           <div><strong>Role:</strong> {user.role}</div>
           <div className="bg-yellow-600 p-1 rounded mt-1">
             <strong>🆔 USER ID:</strong><br/>
-            <span className="break-all">{user.uid}</span>
+            <span className="break-all">{user.id}</span>
           </div>
         </>
       )}

@@ -22,18 +22,7 @@ import AdminLayout from '../../components/Layout/AdminLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { db } from '../../config/firebase';
-import { 
-  collection, 
-  query, 
-  orderBy, 
-  onSnapshot, 
-  doc, 
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  serverTimestamp 
-} from 'firebase/firestore';
+import { supabase, nowISO } from '../../config/supabase';
 import toast from 'react-hot-toast';
 
 interface FAQ {
@@ -78,32 +67,46 @@ const ManageFAQs: React.FC = () => {
   ];
 
   useEffect(() => {
-    // Listen for FAQs from Firestore
-    const q = query(
-      collection(db, 'faqs'),
-      orderBy('order', 'asc'),
-      orderBy('createdAt', 'desc')
-    );
+    // Listen for FAQs from Supabase
+    const channel = supabase
+      .channel('faqs-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'faqs',
+        },
+        () => {
+          loadFaqs();
+        },
+      )
+      .subscribe();
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const faqsData: FAQ[] = [];
-      snapshot.forEach((doc) => {
-        faqsData.push({
-          id: doc.id,
-          ...doc.data()
-        } as FAQ);
-      });
-      setFaqs(faqsData);
-      setLoading(false);
-    }, (error) => {
-      console.error('Error fetching FAQs:', error);
-      // If collection doesn't exist or is empty, initialize with default FAQs
-      initializeDefaultFAQs();
-      setLoading(false);
-    });
+    loadFaqs();
 
-    return () => unsubscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
+
+  const loadFaqs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('faqs')
+        .select('*')
+        .order('order', { ascending: true })
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setFaqs((data ?? []) as FAQ[]);
+    } catch (error) {
+      console.error('Error fetching FAQs:', error);
+      // If table doesn't exist or is empty, initialize with default FAQs
+      initializeDefaultFAQs();
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const initializeDefaultFAQs = async () => {
     const defaultFAQs = [
@@ -146,10 +149,10 @@ const ManageFAQs: React.FC = () => {
 
     try {
       for (const faq of defaultFAQs) {
-        await addDoc(collection(db, 'faqs'), {
+        await supabase.from('faqs').insert({
           ...faq,
-          createdAt: serverTimestamp(),
-          createdBy: 'system'
+          created_at: nowISO(),
+          created_by: 'system'
         });
       }
       toast.success('Default FAQs initialized');
@@ -165,10 +168,10 @@ const ManageFAQs: React.FC = () => {
     }
 
     try {
-      await addDoc(collection(db, 'faqs'), {
+      await supabase.from('faqs').insert({
         ...formData,
-        createdAt: serverTimestamp(),
-        createdBy: 'admin', // In real app, use current admin ID
+        created_at: nowISO(),
+        created_by: 'admin', // In real app, use current admin ID
       });
 
       toast.success('FAQ added successfully');
@@ -187,10 +190,10 @@ const ManageFAQs: React.FC = () => {
     }
 
     try {
-      await updateDoc(doc(db, 'faqs', editingFAQ.id), {
+      await supabase.from('faqs').update({
         ...formData,
-        updatedAt: serverTimestamp()
-      });
+        updated_at: nowISO()
+      }).eq('id', editingFAQ.id);
 
       toast.success('FAQ updated successfully');
       setEditingFAQ(null);
@@ -207,7 +210,7 @@ const ManageFAQs: React.FC = () => {
     }
 
     try {
-      await deleteDoc(doc(db, 'faqs', id));
+      await supabase.from('faqs').delete().eq('id', id);
       toast.success('FAQ deleted successfully');
     } catch (error) {
       console.error('Error deleting FAQ:', error);
@@ -217,10 +220,10 @@ const ManageFAQs: React.FC = () => {
 
   const handleToggleStatus = async (faq: FAQ) => {
     try {
-      await updateDoc(doc(db, 'faqs', faq.id), {
+      await supabase.from('faqs').update({
         isActive: !faq.isActive,
-        updatedAt: serverTimestamp()
-      });
+        updated_at: nowISO()
+      }).eq('id', faq.id);
       toast.success(`FAQ ${faq.isActive ? 'deactivated' : 'activated'} successfully`);
     } catch (error) {
       console.error('Error updating FAQ status:', error);

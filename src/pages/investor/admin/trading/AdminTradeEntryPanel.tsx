@@ -259,7 +259,7 @@ export default function AdminTradeEntryPanel({ onOrderPlaced }: Props) {
       return;
     }
 
-    if (adminUser) logAction(adminUser.uid, adminProfile?.email ?? '', 'Order placed', `${investor.email}: ${side} ${qtyNum} ${displaySymbol}${contractLabel}`);
+    if (adminUser) logAction(adminUser.id, adminProfile?.email ?? '', 'Order placed', `${investor.email}: ${side} ${qtyNum} ${displaySymbol}${contractLabel}`);
 
     if (mode === 'queue') {
       toast.success(`Order queued for ${displaySymbol}`);
@@ -286,7 +286,7 @@ export default function AdminTradeEntryPanel({ onOrderPlaced }: Props) {
       });
       if (adminUser) {
         logAction(
-          adminUser.uid,
+          adminUser.id,
           adminProfile?.email ?? '',
           'Order executed',
           `${investor.email}: ${side} ${qtyNum} ${displaySymbol}${contractLabel} @ ${fmt(unitCostNum)} (${result.tradeRef})`,

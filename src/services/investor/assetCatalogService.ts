@@ -1,18 +1,4 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  onSnapshot,
-  orderBy,
-  query,
-  setDoc,
-  updateDoc,
-  where,
-  type DocumentData,
-  type Unsubscribe,
-} from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase, nowISO } from '../../config/supabase';
 import { LIVE_COLLECTIONS } from '../../config/liveCollections';
 
 // Kept in sync with the Asset Type list in Settings -> Trading Configuration
@@ -76,13 +62,6 @@ export interface Asset {
   contractUnit?: string;
   priority: AssetPriority;
   quoteSymbol: string | null;
-  /**
-   * Massive FUTURES ticker for the underlying this instrument is marked
-   * against, e.g. 'GCZ7' for a Dec-2027 gold contract. Distinct from
-   * quoteSymbol: that is a Finnhub proxy quote for the instrument itself (and
-   * for raw futures it is null), while this drives limited-risk option P/L.
-   * Without it an option position can only ever be marked at cost.
-   */
   underlyingPriceSymbol: string | null;
   dataProvider: 'finnhub';
   quote?: AssetQuote;
@@ -93,7 +72,7 @@ export interface Asset {
   updatedAt?: Date;
 }
 
-function mapGroup(id: string, data: DocumentData): AssetGroup {
+function mapGroup(id: string, data: any): AssetGroup {
   return {
     id,
     label: data.label,
@@ -104,7 +83,7 @@ function mapGroup(id: string, data: DocumentData): AssetGroup {
   };
 }
 
-function mapAsset(id: string, data: DocumentData): Asset {
+function mapAsset(id: string, data: any): Asset {
   return {
     id,
     symbol: data.symbol,
@@ -123,43 +102,45 @@ function mapAsset(id: string, data: DocumentData): Asset {
           price: data.quote.price,
           change: data.quote.change,
           changePercent: data.quote.changePercent,
-          fetchedAt: data.quote.fetchedAt?.toDate?.() ?? undefined,
+          fetchedAt: data.quote.fetchedAt ? new Date(data.quote.fetchedAt) : undefined,
         }
       : undefined,
     isTradable: Boolean(data.isTradable),
     isActive: data.isActive ?? true,
     sortOrder: data.sortOrder,
-    createdAt: data.createdAt?.toDate?.() ?? undefined,
-    updatedAt: data.updatedAt?.toDate?.() ?? undefined,
+    createdAt: data.createdAt ? new Date(data.createdAt) : undefined,
+    updatedAt: data.updatedAt ? new Date(data.updatedAt) : undefined,
   };
 }
 
 export async function getAssetGroups(assetClass?: AssetClass): Promise<AssetGroup[]> {
-  const base = collection(db, LIVE_COLLECTIONS.assetGroups);
-  const q = assetClass
-    ? query(base, where('assetClass', '==', assetClass), orderBy('sortOrder', 'asc'))
-    : query(base, orderBy('sortOrder', 'asc'));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => mapGroup(d.id, d.data()));
+  let q = supabase.from(LIVE_COLLECTIONS.assetGroups).select('*').order('sort_order', { ascending: true });
+  if (assetClass) {
+    q = supabase.from(LIVE_COLLECTIONS.assetGroups).select('*').eq('asset_class', assetClass).order('sort_order', { ascending: true });
+  }
+  const { data, error } = await q;
+  if (error || !data) return [];
+  return data.map((d) => mapGroup(d.id, d));
 }
 
 export async function getAllAssets(assetClass?: AssetClass): Promise<Asset[]> {
-  const base = collection(db, LIVE_COLLECTIONS.assets);
-  const q = assetClass
-    ? query(base, where('assetClass', '==', assetClass), where('isActive', '==', true))
-    : query(base, where('isActive', '==', true));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => mapAsset(d.id, d.data()));
+  let q = supabase.from(LIVE_COLLECTIONS.assets).select('*').eq('is_active', true);
+  if (assetClass) {
+    q = supabase.from(LIVE_COLLECTIONS.assets).select('*').eq('asset_class', assetClass).eq('is_active', true);
+  }
+  const { data, error } = await q;
+  if (error || !data) return [];
+  return data.map((d) => mapAsset(d.id, d));
 }
 
 export async function getAssetsByGroup(groupId: string): Promise<Asset[]> {
-  const q = query(
-    collection(db, LIVE_COLLECTIONS.assets),
-    where('groupId', '==', groupId),
-    where('isActive', '==', true),
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => mapAsset(d.id, d.data()));
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.assets)
+    .select('*')
+    .eq('group_id', groupId)
+    .eq('is_active', true);
+  if (error || !data) return [];
+  return data.map((d) => mapAsset(d.id, d));
 }
 
 export function searchAssets(assets: Asset[], query: string): Asset[] {
@@ -170,33 +151,49 @@ export function searchAssets(assets: Asset[], query: string): Asset[] {
   );
 }
 
-export function subscribeToAsset(symbol: string, cb: (asset: Asset | null) => void): Unsubscribe {
-  return onSnapshot(doc(db, LIVE_COLLECTIONS.assets, symbol), (snap) => {
-    cb(snap.exists() ? mapAsset(snap.id, snap.data()) : null);
-  });
+export function subscribeToAsset(symbol: string, cb: (asset: Asset | null) => void) {
+  const channel = supabase
+    .channel(`asset-${symbol}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: LIVE_COLLECTIONS.assets,
+        filter: `id=eq.${symbol}`,
+      },
+      (payload) => {
+        const d = payload.new as any;
+        cb(d ? mapAsset(d.id, d) : null);
+      },
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }
 
 // Admin catalog management
 export async function createOrUpdateAsset(asset: Omit<Asset, 'quote' | 'createdAt' | 'updatedAt'>) {
-  const ref = doc(db, LIVE_COLLECTIONS.assets, asset.id);
-  const existing = await getDoc(ref);
-  await setDoc(
-    ref,
-    {
-      ...asset,
-      updatedAt: new Date(),
-      ...(existing.exists() ? {} : { createdAt: new Date() }),
-    },
-    { merge: true },
-  );
+  const { data: existing } = await supabase
+    .from(LIVE_COLLECTIONS.assets)
+    .select('*')
+    .eq('id', asset.id)
+    .maybeSingle();
+  await supabase.from(LIVE_COLLECTIONS.assets).upsert({
+    ...asset,
+    updated_at: nowISO(),
+    ...(existing ? {} : { created_at: nowISO() }),
+  });
 }
 
 export async function setAssetTradable(id: string, isTradable: boolean) {
-  await updateDoc(doc(db, LIVE_COLLECTIONS.assets, id), { isTradable, updatedAt: new Date() });
+  await supabase.from(LIVE_COLLECTIONS.assets).update({ is_tradable: isTradable, updated_at: nowISO() }).eq('id', id);
 }
 
 export async function setAssetActive(id: string, isActive: boolean) {
-  await updateDoc(doc(db, LIVE_COLLECTIONS.assets, id), { isActive, updatedAt: new Date() });
+  await supabase.from(LIVE_COLLECTIONS.assets).update({ is_active: isActive, updated_at: nowISO() }).eq('id', id);
 }
 
 export async function refreshAssetQuote(_symbol: string): Promise<{ symbol: string; price: number; change: number; changePercent: number }> {

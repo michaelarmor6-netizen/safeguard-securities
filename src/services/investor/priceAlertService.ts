@@ -1,16 +1,4 @@
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  orderBy,
-  query,
-  updateDoc,
-  where,
-  type DocumentData,
-} from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase, nowISO } from '../../config/supabase';
 import { LIVE_COLLECTIONS } from '../../config/liveCollections';
 
 export type AlertCondition = 'above' | 'below';
@@ -30,27 +18,30 @@ export interface PriceAlert {
   triggeredPrice?: number;
 }
 
-function mapAlert(id: string, data: DocumentData): PriceAlert {
+function mapAlert(id: string, data: any): PriceAlert {
   return {
     id,
-    userId: data.userId ?? '',
-    assetId: data.assetId ?? '',
+    userId: data.user_id ?? data.userId ?? '',
+    assetId: data.asset_id ?? data.assetId ?? '',
     symbol: data.symbol ?? '',
     condition: data.condition ?? 'above',
-    targetPrice: Number(data.targetPrice ?? 0),
+    targetPrice: Number(data.target_price ?? data.targetPrice ?? 0),
     status: data.status ?? 'active',
     seen: Boolean(data.seen ?? true),
-    createdAt: data.createdAt?.toDate?.(),
-    triggeredAt: data.triggeredAt?.toDate?.(),
-    triggeredPrice: data.triggeredPrice != null ? Number(data.triggeredPrice) : undefined,
+    createdAt: data.created_at ? new Date(data.created_at) : undefined,
+    triggeredAt: data.triggered_at ? new Date(data.triggered_at) : undefined,
+    triggeredPrice: data.triggered_price != null ? Number(data.triggered_price) : undefined,
   };
 }
 
 export async function getAlertsForUser(userId: string): Promise<PriceAlert[]> {
-  const snap = await getDocs(
-    query(collection(db, LIVE_COLLECTIONS.priceAlerts), where('userId', '==', userId), orderBy('createdAt', 'desc')),
-  );
-  return snap.docs.map((d) => mapAlert(d.id, d.data()));
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.priceAlerts)
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error || !data) return [];
+  return data.map((d) => mapAlert(d.id, d));
 }
 
 export async function createPriceAlert(input: {
@@ -60,23 +51,26 @@ export async function createPriceAlert(input: {
   condition: AlertCondition;
   targetPrice: number;
 }) {
-  await addDoc(collection(db, LIVE_COLLECTIONS.priceAlerts), {
-    ...input,
+  await supabase.from(LIVE_COLLECTIONS.priceAlerts).insert({
+    user_id: input.userId,
+    asset_id: input.assetId,
     symbol: input.symbol.toUpperCase(),
+    condition: input.condition,
+    target_price: input.targetPrice,
     status: 'active',
     seen: true,
-    createdAt: new Date(),
+    created_at: nowISO(),
   });
 }
 
 export async function cancelPriceAlert(alertId: string) {
-  await updateDoc(doc(db, LIVE_COLLECTIONS.priceAlerts, alertId), { status: 'cancelled', updatedAt: new Date() });
+  await supabase.from(LIVE_COLLECTIONS.priceAlerts).update({ status: 'cancelled', updated_at: nowISO() }).eq('id', alertId);
 }
 
 export async function markAlertSeen(alertId: string) {
-  await updateDoc(doc(db, LIVE_COLLECTIONS.priceAlerts, alertId), { seen: true, updatedAt: new Date() });
+  await supabase.from(LIVE_COLLECTIONS.priceAlerts).update({ seen: true, updated_at: nowISO() }).eq('id', alertId);
 }
 
 export async function deletePriceAlert(alertId: string) {
-  await deleteDoc(doc(db, LIVE_COLLECTIONS.priceAlerts, alertId));
+  await supabase.from(LIVE_COLLECTIONS.priceAlerts).delete().eq('id', alertId);
 }

@@ -31,11 +31,11 @@ const AccountOverview: React.FC = () => {
   const { user } = useAuth();
   
   // Enhanced authentication and loading check
-  const isUserReady = user && user.uid && user.uid.trim() !== '';
+  const isUserReady = user && user.id && user.id.trim() !== '';
   
   // Optimized Firebase query for user accounts - only run if user is properly loaded
   const { data: accounts, loading: isLoadingAccounts, error: accountsError, refetch } = useUserAccounts(
-    isUserReady ? user.uid : ''
+    isUserReady ? user.id : ''
   );
   
   // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
@@ -81,7 +81,7 @@ const AccountOverview: React.FC = () => {
       // Only show toast for other errors with cooldown to prevent spam
       const currentTime = Date.now();
       const lastErrorTime = localStorage.getItem('lastAccountErrorTime');
-      const errorKey = `accountError_${user?.uid || 'anonymous'}`;
+      const errorKey = `accountError_${user?.id || 'anonymous'}`;
       const lastErrorMessage = localStorage.getItem(errorKey);
       
       // Show error toast with shorter cooldown (30 seconds) for better UX
@@ -105,11 +105,11 @@ const AccountOverview: React.FC = () => {
       }
     } else {
       // Clear error state when there's no error
-      const errorKey = `accountError_${user?.uid || 'anonymous'}`;
+      const errorKey = `accountError_${user?.id || 'anonymous'}`;
       localStorage.removeItem('lastAccountErrorTime');
       localStorage.removeItem(errorKey);
     }
-  }, [accountsError, user?.uid, accounts.length, isLoadingAccounts]);
+  }, [accountsError, user?.id, accounts.length, isLoadingAccounts]);
 
   const handleRefresh = async () => {
     try {

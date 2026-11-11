@@ -116,11 +116,11 @@ export default function InvestorAdminCrmImportsPage() {
           deduped: rows.filter((r) => r.duplicateOfLeadId || r.duplicateInBatch).length,
           suppressed: rows.filter((r) => r.suppressed).length,
         },
-        confirmedBy: user?.uid ?? '',
+        confirmedBy: user?.id ?? '',
         confirmedByEmail: user?.email ?? '',
       }, files);
       const n = await commitLeads(eligible, { kind: 'file', batchId, file: files.map((f) => f.name).join(', ') }, consentBasis);
-      await logAction(user?.uid ?? '', user?.email ?? '', 'crm.import',
+      await logAction(user?.id ?? '', user?.email ?? '', 'crm.import',
         `${n} leads imported from ${files.map((f) => f.name).join(', ')} (consent: ${consentBasis})`);
       setCommittedCount(n);
       setStep(4);
@@ -181,7 +181,7 @@ export default function InvestorAdminCrmImportsPage() {
                     setBusy(true);
                     try {
                       const n = await declineGiLeads(items, user?.email ?? '', reason || 'declined');
-                      await logAction(user?.uid ?? '', user?.email ?? '', 'crm.gi.decline', `${n} GI leads declined: ${reason}`);
+                      await logAction(user?.id ?? '', user?.email ?? '', 'crm.gi.decline', `${n} GI leads declined: ${reason}`);
                       toast.success(`${n} declined`);
                       setGiSelected(new Set()); loadGi();
                     } catch (e) { toast.error(e instanceof Error ? e.message : 'Decline failed'); }
@@ -192,7 +192,7 @@ export default function InvestorAdminCrmImportsPage() {
                     setBusy(true);
                     try {
                       const r = await acceptGiLeads(items, user?.email ?? '');
-                      await logAction(user?.uid ?? '', user?.email ?? '', 'crm.gi.accept',
+                      await logAction(user?.id ?? '', user?.email ?? '', 'crm.gi.accept',
                         `${r.accepted} GI leads accepted, ${r.duplicates} were already in the CRM`);
                       toast.success(`${r.accepted} accepted into the CRM${r.duplicates ? ` · ${r.duplicates} already existed` : ''}`);
                       setGiSelected(new Set()); loadGi();

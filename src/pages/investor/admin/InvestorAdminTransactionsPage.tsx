@@ -68,7 +68,7 @@ export default function InvestorAdminTransactionsPage() {
     // Exporting client payment records is an auditable act.
     if (user) {
       logAction(
-        user.uid,
+        user.id,
         adminProfile?.email ?? '',
         'Transactions exported',
         `${filtered.length} transaction(s), ${fmt(total)}`,

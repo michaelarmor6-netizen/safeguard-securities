@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown, Search, X, Globe } from 'lucide-react';
 import { Country, countries as staticCountries, matchCountries } from '../../utils/countries';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 
 interface SearchableCountrySelectProps {
   value: string;
@@ -30,16 +29,19 @@ const SearchableCountrySelect: React.FC<SearchableCountrySelectProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // The built-in list is always shown. Firestore only hides countries an admin
+  // The built-in list is always shown. Supabase only hides countries an admin
   // turned off, and a failed read leaves the full list in place.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const snap = await getDocs(query(collection(db, 'countries'), where('enabled', '==', false)));
-        if (cancelled) return;
+        const { data, error } = await supabase
+          .from('countries')
+          .select('code')
+          .eq('enabled', false);
+        if (cancelled || error) return;
         const disabledCodes = new Set(
-          snap.docs.map((row) => String(row.data().code ?? '').toUpperCase()).filter(Boolean),
+          (data ?? []).map((row) => String(row.code ?? '').toUpperCase()).filter(Boolean),
         );
         if (disabledCodes.size > 0) {
           setCountries(staticCountries.filter((country) => !disabledCodes.has(country.code)));

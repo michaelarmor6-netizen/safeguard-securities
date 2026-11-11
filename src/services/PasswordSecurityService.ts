@@ -1,18 +1,4 @@
-import { 
-  updatePassword, 
-  reauthenticateWithCredential, 
-  EmailAuthProvider,
-  sendPasswordResetEmail
-} from 'firebase/auth';
-import { 
-  doc, 
-  updateDoc, 
-  addDoc, 
-  collection, 
-  serverTimestamp,
-  getDoc 
-} from 'firebase/firestore';
-import { auth, db } from '../config/firebase';
+import { supabase, nowISO } from '../config/supabase';
 import toast from 'react-hot-toast';
 
 export interface PasswordChangeRequest {
@@ -36,7 +22,6 @@ export interface PasswordStrength {
 }
 
 export class PasswordSecurityService {
-  
   /**
    * Validate password strength according to banking industry standards
    */
@@ -68,11 +53,16 @@ export class PasswordSecurityService {
    */
   private static isCommonPassword(password: string): boolean {
     const commonPasswords = [
-      'password', '123456', '123456789', 'qwerty', 'abc123', 
+      'password', '123456', '123456789', 'qwerty', 'abc123',
       'password123', 'admin', 'letmein', 'welcome', 'monkey',
       'dragon', 'master', 'shadow', 'baseball', 'football'
     ];
     return commonPasswords.includes(password.toLowerCase());
+  }
+
+  private static async currentUser() {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.user ?? null;
   }
 
   /**
@@ -80,7 +70,7 @@ export class PasswordSecurityService {
    */
   static async changeTemporaryPassword(newPassword: string, confirmPassword: string): Promise<boolean> {
     try {
-      const user = auth.currentUser;
+      const user = await this.currentUser();
       if (!user || !user.email) {
         throw new Error('User not authenticated');
       }
@@ -97,66 +87,61 @@ export class PasswordSecurityService {
       }
 
       // Check if user has mustChangePassword flag
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      const userData = userDoc.data();
-      
-      if (!userData?.mustChangePassword) {
+      const { data: userDoc } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
+      const userData = userDoc ?? null;
+
+      if (!userData?.must_change_password) {
         throw new Error('This function is only for temporary password changes. Use regular password change instead.');
       }
 
-      // Update password in Firebase Auth directly (no re-authentication needed for temporary passwords)
-      await updatePassword(user, newPassword);
+      // Update password in Supabase Auth directly
+      const { error: updErr } = await supabase.auth.updateUser({ password: newPassword });
+      if (updErr) throw updErr;
 
       // Get current IP for logging
       const currentIP = await this.getCurrentIP();
 
       // Update user document
-      await updateDoc(doc(db, 'users', user.uid), {
-        lastPasswordChange: serverTimestamp(),
-        mustChangePassword: false,
+      await supabase.from('users').update({
+        last_password_change: nowISO(),
+        must_change_password: false,
         security: {
-          ...userData?.security,
-          passwordChangedAt: serverTimestamp(),
-          temporaryPasswordUsed: true,
-          passwordHistory: [
-            ...(userData?.security?.passwordHistory || []).slice(-4),
+          ...(userData?.security ?? {}),
+          password_changed_at: nowISO(),
+          temporary_password_used: true,
+          password_history: [
+            ...((userData?.security as any)?.password_history ?? []).slice(-4),
             {
-              timestamp: new Date(),
+              timestamp: new Date().toISOString(),
               ip: currentIP,
               type: 'temporary_password_change'
             }
           ]
         },
-        updatedAt: serverTimestamp()
-      });
+        updated_at: nowISO()
+      }).eq('id', user.id);
 
       // Log security event
-      await this.logSecurityEvent(user.uid, 'temporary_password_changed', {
-        timestamp: new Date(),
+      await this.logSecurityEvent(user.id, 'temporary_password_changed', {
+        timestamp: new Date().toISOString(),
         ip: currentIP,
         userAgent: navigator.userAgent
       });
 
       // Force user to re-authenticate by signing them out
-      // This ensures the new password takes effect immediately and clears any cached auth tokens
       try {
-        const { signOut } = await import('firebase/auth');
-        
-        // Clear any browser caches and persistent storage
+        // Clear Supabase persistence data
         if (typeof window !== 'undefined' && window.localStorage) {
-          // Clear Firebase persistence data
           Object.keys(window.localStorage).forEach(key => {
-            if (key.startsWith('firebase:')) {
+            if (key.startsWith('supabase:')) {
               window.localStorage.removeItem(key);
             }
           });
         }
-        
-        await signOut(auth);
+        await supabase.auth.signOut();
         console.log('User signed out after temporary password change to force re-authentication');
       } catch (signOutError) {
         console.warn('Failed to sign out user after temporary password change:', signOutError);
-        // Continue anyway - the password was changed successfully
       }
 
       toast.success('Password changed successfully! You can now use your new password to log in.');
@@ -164,12 +149,8 @@ export class PasswordSecurityService {
 
     } catch (error: any) {
       console.error('Temporary password change error:', error);
-      
       let errorMessage = 'Failed to change password';
-      if (error.message) {
-        errorMessage = error.message;
-      }
-      
+      if (error.message) errorMessage = error.message;
       toast.error(errorMessage);
       return false;
     }
@@ -180,7 +161,7 @@ export class PasswordSecurityService {
    */
   static async changePassword(request: PasswordChangeRequest): Promise<boolean> {
     try {
-      const user = auth.currentUser;
+      const user = await this.currentUser();
       if (!user || !user.email) {
         throw new Error('User not authenticated');
       }
@@ -197,75 +178,72 @@ export class PasswordSecurityService {
       }
 
       // Check if 2FA is enabled and validate code
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      const userData = userDoc.data();
-      
-      if (userData?.security?.twoFactorEnabled && !request.twoFactorCode) {
+      const { data: userDoc } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
+      const userData = userDoc ?? null;
+
+      if (userData?.security?.two_factor_enabled && !request.twoFactorCode) {
         throw new Error('Two-factor authentication code required');
       }
 
-      if (userData?.security?.twoFactorEnabled && request.twoFactorCode) {
-        const isValidCode = await this.verify2FACode(user.uid, request.twoFactorCode);
+      if (userData?.security?.two_factor_enabled && request.twoFactorCode) {
+        const isValidCode = await this.verify2FACode(user.id, request.twoFactorCode);
         if (!isValidCode) {
           throw new Error('Invalid two-factor authentication code');
         }
       }
 
       // Re-authenticate user with current password
-      const credential = EmailAuthProvider.credential(user.email, request.currentPassword);
-      await reauthenticateWithCredential(user, credential);
+      const { error: reauthErr } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: request.currentPassword,
+      });
+      if (reauthErr) throw new Error('Current password is incorrect');
 
-      // Update password in Firebase Auth
-      await updatePassword(user, request.newPassword);
+      // Update password in Supabase Auth
+      const { error: updErr } = await supabase.auth.updateUser({ password: request.newPassword });
+      if (updErr) throw updErr;
 
       // Get current IP for logging
       const currentIP = await this.getCurrentIP();
 
       // Update user document with password change timestamp
-      await updateDoc(doc(db, 'users', user.uid), {
-        lastPasswordChange: serverTimestamp(),
-        mustChangePassword: false,
+      await supabase.from('users').update({
+        last_password_change: nowISO(),
+        must_change_password: false,
         security: {
-          ...userData?.security,
-          passwordChangedAt: serverTimestamp(),
-          passwordHistory: [
-            ...(userData?.security?.passwordHistory || []).slice(-4), // Keep last 5 passwords
+          ...(userData?.security ?? {}),
+          password_changed_at: nowISO(),
+          password_history: [
+            ...((userData?.security as any)?.password_history ?? []).slice(-4),
             {
-              timestamp: new Date(),
+              timestamp: new Date().toISOString(),
               ip: currentIP
             }
           ]
         },
-        updatedAt: serverTimestamp()
-      });
+        updated_at: nowISO()
+      }).eq('id', user.id);
 
       // Log security event
-      await this.logSecurityEvent(user.uid, 'password_changed', {
-        timestamp: new Date(),
+      await this.logSecurityEvent(user.id, 'password_changed', {
+        timestamp: new Date().toISOString(),
         ip: currentIP,
         userAgent: navigator.userAgent
       });
 
       // Force user to re-authenticate by signing them out
-      // This ensures the new password takes effect immediately and clears any cached auth tokens
       try {
-        const { signOut } = await import('firebase/auth');
-        
-        // Clear any browser caches and persistent storage
         if (typeof window !== 'undefined' && window.localStorage) {
-          // Clear Firebase persistence data
           Object.keys(window.localStorage).forEach(key => {
-            if (key.startsWith('firebase:')) {
+            if (key.startsWith('supabase:')) {
               window.localStorage.removeItem(key);
             }
           });
         }
-        
-        await signOut(auth);
+        await supabase.auth.signOut();
         console.log('User signed out after password change to force re-authentication');
       } catch (signOutError) {
         console.warn('Failed to sign out user after password change:', signOutError);
-        // Continue anyway - the password was changed successfully
       }
 
       toast.success('Password changed successfully! Please log in with your new password.');
@@ -273,16 +251,8 @@ export class PasswordSecurityService {
 
     } catch (error: any) {
       console.error('Password change error:', error);
-      
       let errorMessage = 'Failed to change password';
-      if (error.code === 'auth/wrong-password') {
-        errorMessage = 'Current password is incorrect';
-      } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'New password is too weak';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
+      if (error.message) errorMessage = error.message;
       toast.error(errorMessage);
       return false;
     }
@@ -295,38 +265,32 @@ export class PasswordSecurityService {
     try {
       // Generate a secret key for TOTP
       const secret = this.generateTOTPSecret();
-      
+
       // Generate backup codes
       const backupCodes = this.generateBackupCodes();
-      
-      // Create QR code URL for authenticator apps
-      const userDoc = await getDoc(doc(db, 'users', userId));
-      const userData = userDoc.data();
+
+      const { data: userDoc } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+      const userData = userDoc ?? null;
       const appName = 'Digital Banking Platform';
       const accountName = userData?.email || 'user';
-      
+
       const qrCodeUrl = `otpauth://totp/${encodeURIComponent(appName)}:${encodeURIComponent(accountName)}?secret=${secret}&issuer=${encodeURIComponent(appName)}`;
-      
+
       // Store 2FA setup in database (not activated yet)
-      await updateDoc(doc(db, 'users', userId), {
+      await supabase.from('users').update({
         security: {
-          ...userData?.security,
-          twoFactorSetup: {
+          ...(userData?.security ?? {}),
+          two_factor_setup: {
             secret,
-            backupCodes: backupCodes.map(code => ({ code, used: false })),
-            setupAt: serverTimestamp(),
+            backup_codes: backupCodes.map(code => ({ code, used: false })),
+            setup_at: nowISO(),
             activated: false
           }
         },
-        updatedAt: serverTimestamp()
-      });
+        updated_at: nowISO()
+      }).eq('id', userId);
 
-      return {
-        secret,
-        qrCode: qrCodeUrl,
-        backupCodes
-      };
-
+      return { secret, qrCode: qrCodeUrl, backupCodes };
     } catch (error) {
       console.error('2FA setup error:', error);
       throw new Error('Failed to setup two-factor authentication');
@@ -338,37 +302,37 @@ export class PasswordSecurityService {
    */
   static async enable2FA(userId: string, verificationCode: string): Promise<boolean> {
     try {
-      const userDoc = await getDoc(doc(db, 'users', userId));
-      const userData = userDoc.data();
-      
-      if (!userData?.security?.twoFactorSetup?.secret) {
+      const { data: userDoc } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+      const userData = userDoc ?? null;
+
+      if (!userData?.security?.two_factor_setup?.secret) {
         throw new Error('2FA not set up. Please complete setup first.');
       }
 
       // Verify the code using the secret
-      const isValid = this.verifyTOTPCode(userData.security.twoFactorSetup.secret, verificationCode);
-      
+      const isValid = this.verifyTOTPCode(userData.security.two_factor_setup.secret, verificationCode);
+
       if (!isValid) {
         throw new Error('Invalid verification code');
       }
 
       // Activate 2FA
-      await updateDoc(doc(db, 'users', userId), {
+      await supabase.from('users').update({
         security: {
-          ...userData.security,
-          twoFactorEnabled: true,
-          twoFactorActivatedAt: serverTimestamp(),
-          twoFactorSetup: {
-            ...userData.security.twoFactorSetup,
+          ...(userData.security as any),
+          two_factor_enabled: true,
+          two_factor_activated_at: nowISO(),
+          two_factor_setup: {
+            ...(userData.security as any).two_factor_setup,
             activated: true
           }
         },
-        updatedAt: serverTimestamp()
-      });
+        updated_at: nowISO()
+      }).eq('id', userId);
 
       // Log security event
       await this.logSecurityEvent(userId, '2fa_enabled', {
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
         ip: await this.getCurrentIP()
       });
 
@@ -387,14 +351,17 @@ export class PasswordSecurityService {
    */
   static async disable2FA(userId: string, password: string, verificationCode: string): Promise<boolean> {
     try {
-      const user = auth.currentUser;
+      const user = await this.currentUser();
       if (!user || !user.email) {
         throw new Error('User not authenticated');
       }
 
       // Re-authenticate with password
-      const credential = EmailAuthProvider.credential(user.email, password);
-      await reauthenticateWithCredential(user, credential);
+      const { error: reauthErr } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password,
+      });
+      if (reauthErr) throw reauthErr;
 
       // Verify 2FA code
       const isValid = await this.verify2FACode(userId, verificationCode);
@@ -403,22 +370,22 @@ export class PasswordSecurityService {
       }
 
       // Disable 2FA
-      const userDoc = await getDoc(doc(db, 'users', userId));
-      const userData = userDoc.data();
+      const { data: userDoc } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+      const userData = userDoc ?? null;
 
-      await updateDoc(doc(db, 'users', userId), {
+      await supabase.from('users').update({
         security: {
-          ...userData?.security,
-          twoFactorEnabled: false,
-          twoFactorDisabledAt: serverTimestamp(),
-          twoFactorSetup: null // Remove setup data
+          ...(userData?.security ?? {}),
+          two_factor_enabled: false,
+          two_factor_disabled_at: nowISO(),
+          two_factor_setup: null // Remove setup data
         },
-        updatedAt: serverTimestamp()
-      });
+        updated_at: nowISO()
+      }).eq('id', userId);
 
       // Log security event
       await this.logSecurityEvent(userId, '2fa_disabled', {
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
         ip: await this.getCurrentIP()
       });
 
@@ -437,38 +404,38 @@ export class PasswordSecurityService {
    */
   static async verify2FACode(userId: string, code: string): Promise<boolean> {
     try {
-      const userDoc = await getDoc(doc(db, 'users', userId));
-      const userData = userDoc.data();
-      
-      if (!userData?.security?.twoFactorEnabled) {
+      const { data: userDoc } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+      const userData = userDoc ?? null;
+
+      if (!userData?.security?.two_factor_enabled) {
         return true; // 2FA not enabled, skip verification
       }
 
-      const secret = userData.security.twoFactorSetup?.secret;
+      const secret = (userData.security as any)?.two_factor_setup?.secret;
       if (!secret) {
         throw new Error('2FA secret not found');
       }
 
       // Check if it's a backup code
-      const backupCodes = userData.security.twoFactorSetup?.backupCodes || [];
+      const backupCodes = (userData.security as any)?.two_factor_setup?.backup_codes || [];
       const backupCodeMatch = backupCodes.find((bc: any) => bc.code === code && !bc.used);
-      
+
       if (backupCodeMatch) {
         // Mark backup code as used
-        const updatedBackupCodes = backupCodes.map((bc: any) => 
-          bc.code === code ? { ...bc, used: true, usedAt: serverTimestamp() } : bc
+        const updatedBackupCodes = backupCodes.map((bc: any) =>
+          bc.code === code ? { ...bc, used: true, used_at: nowISO() } : bc
         );
-        
-        await updateDoc(doc(db, 'users', userId), {
+
+        await supabase.from('users').update({
           security: {
-            ...userData.security,
-            twoFactorSetup: {
-              ...userData.security.twoFactorSetup,
-              backupCodes: updatedBackupCodes
+            ...(userData.security as any),
+            two_factor_setup: {
+              ...(userData.security as any).two_factor_setup,
+              backup_codes: updatedBackupCodes
             }
           },
-          updatedAt: serverTimestamp()
-        });
+          updated_at: nowISO()
+        }).eq('id', userId);
 
         return true;
       }
@@ -516,7 +483,7 @@ export class PasswordSecurityService {
     const expectedCode = this.generateTOTPCode(secret, timeSlice);
     const previousCode = this.generateTOTPCode(secret, timeSlice - 1);
     const nextCode = this.generateTOTPCode(secret, timeSlice + 1);
-    
+
     return code === expectedCode || code === previousCode || code === nextCode;
   }
 
@@ -548,13 +515,13 @@ export class PasswordSecurityService {
   private static async logSecurityEvent(userId: string, event: string, details: any): Promise<void> {
     try {
       const currentIP = details.ip || await this.getCurrentIP();
-      await addDoc(collection(db, 'security_logs'), {
-        userId,
+      await supabase.from('security_logs').insert({
+        user_id: userId,
         event,
         details,
-        timestamp: serverTimestamp(),
+        timestamp: nowISO(),
         ip: currentIP,
-        userAgent: navigator.userAgent
+        user_agent: navigator.userAgent
       });
     } catch (error) {
       console.error('Failed to log security event:', error);
@@ -579,19 +546,20 @@ export class PasswordSecurityService {
    */
   static async sendPasswordResetEmail(email: string): Promise<boolean> {
     try {
-      await sendPasswordResetEmail(auth, email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw error;
       toast.success('Password reset email sent! Check your inbox.');
       return true;
     } catch (error: any) {
       console.error('Password reset error:', error);
-      
+
       let errorMessage = 'Failed to send password reset email';
-      if (error.code === 'auth/user-not-found') {
+      if (error.message?.includes('not found')) {
         errorMessage = 'No account found with this email address';
-      } else if (error.code === 'auth/invalid-email') {
+      } else if (error.message?.includes('invalid')) {
         errorMessage = 'Invalid email address';
       }
-      
+
       toast.error(errorMessage);
       return false;
     }

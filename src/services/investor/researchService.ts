@@ -1,5 +1,4 @@
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 
 export interface CompanyProfile {
   name: string;
@@ -31,8 +30,6 @@ export interface CompanyResearch {
   profile: CompanyProfile;
   metrics: CompanyMetrics;
 }
-
-const getCompanyResearchFn = httpsCallable<{ symbol: string }, CompanyResearch>(functions, 'getCompanyResearch');
 
 export async function getCompanyResearch(_symbol: string): Promise<CompanyResearch> {
   throw new Error('Company research is paused.');

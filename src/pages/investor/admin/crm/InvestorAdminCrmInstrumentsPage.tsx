@@ -58,7 +58,7 @@ export default function InvestorAdminCrmInstrumentsPage() {
         defaultDemoUrl: selected.defaultDemoUrl,
         defaultSteps: selected.defaultSteps,
       });
-      if (user) logAction(user.uid, user.email ?? '', 'crm.instrument.update', selected.slug);
+      if (user) logAction(user.id, user.email ?? '', 'crm.instrument.update', selected.slug);
       toast.success('Instrument saved');
       load();
     } catch (e) {
@@ -69,7 +69,7 @@ export default function InvestorAdminCrmInstrumentsPage() {
   const create = async () => {
     try {
       const slug = await upsertInstrument(draft);
-      if (user) logAction(user.uid, user.email ?? '', 'crm.instrument.create', slug);
+      if (user) logAction(user.id, user.email ?? '', 'crm.instrument.create', slug);
       toast.success('Instrument created');
       setCreating(false);
       load();

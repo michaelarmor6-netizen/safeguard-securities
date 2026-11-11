@@ -221,7 +221,7 @@ export interface ClientDetailsDrawerProps {
 
 export default function ClientDetailsDrawer({ profile, onClose }: ClientDetailsDrawerProps) {
   const { user, profile: viewer } = useInvestorAuth();
-  const canViewBook = viewer ? isPlatformAdmin(viewer.role) : false;
+  const canViewBook = viewer ? isPlatformAdmin(viewer.role as any) : false;
   const [balance, setBalance] = useState<number | null>(null);
   const [requests, setRequests] = useState<FundingRequest[]>([]);
   const [kyc, setKyc] = useState<KycSubmission[]>([]);
@@ -620,7 +620,7 @@ export default function ClientDetailsDrawer({ profile, onClose }: ClientDetailsD
                             <HoldingTermsEditor
                               holding={h}
                               userId={profile.id}
-                              actorId={user?.uid}
+                              actorId={user?.id}
                               actorEmail={viewer?.email}
                               onSaved={() => setReloadKey((n) => n + 1)}
                             />

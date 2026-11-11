@@ -1,5 +1,4 @@
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { supabase, nowISO } from '../config/supabase';
 
 export interface AdminNotification {
   type: 'password_reset' | 'account_created' | 'security_alert' | 'system_info';
@@ -44,11 +43,11 @@ export const createPasswordResetNotification = async (
       adminId: adminInfo.id,
       adminEmail: adminInfo.email,
       read: false,
-      timestamp: serverTimestamp()
+      timestamp: nowISO()
     };
 
-    await addDoc(collection(db, 'admin_notifications'), notification);
-    
+    await supabase.from('admin_notifications').insert(notification);
+
     // Also log for audit trail
     console.log('📧 Password Reset Notification Created');
     console.log('User:', userInfo.firstName, userInfo.lastName);
@@ -56,7 +55,7 @@ export const createPasswordResetNotification = async (
     console.log('Email:', userInfo.email);
     console.log('Reset by:', adminInfo.email);
     console.log('Temporary Password:', temporaryPassword);
-    
+
   } catch (error) {
     console.error('Failed to create password reset notification:', error);
   }
@@ -92,11 +91,11 @@ export const createAccountCreationNotification = async (
       adminId: adminInfo.id,
       adminEmail: adminInfo.email,
       read: false,
-      timestamp: serverTimestamp()
+      timestamp: nowISO()
     };
 
-    await addDoc(collection(db, 'admin_notifications'), notification);
-    
+    await supabase.from('admin_notifications').insert(notification);
+
   } catch (error) {
     console.error('Failed to create account creation notification:', error);
   }
@@ -116,11 +115,11 @@ export const createSecurityNotification = async (
       message,
       priority,
       read: false,
-      timestamp: serverTimestamp()
+      timestamp: nowISO()
     };
 
-    await addDoc(collection(db, 'admin_notifications'), notification);
-    
+    await supabase.from('admin_notifications').insert(notification);
+
   } catch (error) {
     console.error('Failed to create security notification:', error);
   }
@@ -145,17 +144,17 @@ export const createPasswordResetRequestNotification = async (
       message: `${requestData.firstName} ${requestData.lastName} (@${requestData.username}) has requested a password reset. Reason: ${requestData.reason.replace(/_/g, ' ')}. Request ID: ${requestData.requestId}`,
       priority: 'medium',
       read: false,
-      timestamp: serverTimestamp()
+      timestamp: nowISO()
     };
 
-    await addDoc(collection(db, 'admin_notifications'), notification);
-    
+    await supabase.from('admin_notifications').insert(notification);
+
     console.log('📧 Password Reset Request Notification Created');
     console.log('User:', requestData.firstName, requestData.lastName);
     console.log('Username:', requestData.username);
     console.log('Request ID:', requestData.requestId);
     console.log('Reason:', requestData.reason);
-    
+
   } catch (error) {
     console.error('Failed to create password reset request notification:', error);
   }

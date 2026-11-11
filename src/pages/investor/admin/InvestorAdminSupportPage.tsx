@@ -25,7 +25,7 @@ export default function InvestorAdminSupportPage() {
     }
     try {
       await replyToTicket(id, reply);
-      if (user) logAction(user.uid, adminProfile?.email ?? '', 'Ticket replied', `${ticket.userEmail ?? ticket.userId}: ${ticket.subject}`);
+      if (user) logAction(user.id, adminProfile?.email ?? '', 'Ticket replied', `${ticket.userEmail ?? ticket.userId}: ${ticket.subject}`);
       toast.success('Reply sent');
       setReplyDrafts((prev) => ({ ...prev, [id]: '' }));
       load();
@@ -74,7 +74,7 @@ export default function InvestorAdminSupportPage() {
                   onClick={async () => {
                     try {
                       await closeTicket(t.id);
-                      if (user) logAction(user.uid, adminProfile?.email ?? '', 'Ticket closed', `${t.userEmail ?? t.userId}: ${t.subject}`);
+                      if (user) logAction(user.id, adminProfile?.email ?? '', 'Ticket closed', `${t.userEmail ?? t.userId}: ${t.subject}`);
                       toast.success('Ticket closed');
                       load();
                     } catch (e) {

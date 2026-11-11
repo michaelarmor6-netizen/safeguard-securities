@@ -47,7 +47,7 @@ export function useEntitlements(): Entitlements {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(() => {
-    if (!user?.uid) {
+    if (!user?.id) {
       setState(null);
       setLoading(false);
       return () => {};
@@ -56,7 +56,7 @@ export function useEntitlements(): Entitlements {
     let cancelled = false;
     setLoading(true);
 
-    getSubscriptionState(user.uid, plan)
+    getSubscriptionState(user.id, plan)
       .then((next) => {
         if (!cancelled) setState(next);
       })
@@ -71,7 +71,7 @@ export function useEntitlements(): Entitlements {
     return () => {
       cancelled = true;
     };
-  }, [user?.uid, plan]);
+  }, [user?.id, plan]);
 
   useEffect(() => load(), [load]);
 

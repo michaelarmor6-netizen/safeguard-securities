@@ -59,7 +59,7 @@ const WithdrawFunds: React.FC = () => {
   
   // Load user's real accounts from Firebase
   const { data: userAccounts, loading: accountsLoading, error: accountsError } = useUserAccounts(
-    user?.uid || ''
+    user?.id || ''
   );
 
   const [selectedMethod, setSelectedMethod] = useState<string>('');

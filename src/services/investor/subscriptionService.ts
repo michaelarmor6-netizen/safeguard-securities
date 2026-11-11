@@ -1,15 +1,4 @@
-import {
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  updateDoc,
-  where,
-  type DocumentData,
-} from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase, nowISO } from '../../config/supabase';
 import { LIVE_COLLECTIONS } from '../../config/liveCollections';
 import {
   currentPeriodKey,
@@ -47,12 +36,12 @@ export interface SubscriptionState {
   quotaExhausted: boolean;
 }
 
-function mapUsage(id: string, data: DocumentData): AiUsage {
+function mapUsage(id: string, data: any): AiUsage {
   return {
-    userId: data.userId ?? id.split('_')[0] ?? '',
+    userId: data.user_id ?? data.userId ?? id.split('_')[0] ?? '',
     period: data.period ?? '',
-    signalsUsed: Number(data.signalsUsed ?? 0),
-    updatedAt: data.updatedAt?.toDate?.() ?? undefined,
+    signalsUsed: Number(data.signals_used ?? data.signalsUsed ?? 0),
+    updatedAt: data.updated_at ? new Date(data.updated_at) : undefined,
   };
 }
 
@@ -68,8 +57,12 @@ export async function getUsageForPeriod(
   if (!userId) return empty;
 
   try {
-    const snap = await getDoc(doc(db, LIVE_COLLECTIONS.aiUsage, usageDocId(userId, period)));
-    return snap.exists() ? mapUsage(snap.id, snap.data()) : empty;
+    const { data } = await supabase
+      .from(LIVE_COLLECTIONS.aiUsage)
+      .select('*')
+      .eq('id', usageDocId(userId, period))
+      .maybeSingle();
+    return data ? mapUsage(data.id!, data) : empty;
   } catch (error) {
     // Usage is a display concern - never block the page on it.
     console.error('Failed to read AI usage:', error);
@@ -80,7 +73,7 @@ export async function getUsageForPeriod(
 /**
  * Full subscription picture for a client: plan, allowance, and what is left.
  * `plan` comes from the caller (it is already on the profile) so this costs
- * one Firestore read rather than two.
+ * one Supabase read rather than two.
  */
 export async function getSubscriptionState(
   userId: string,
@@ -111,19 +104,19 @@ export async function getSubscriptionState(
  * support - comps, goodwill credits, and fixing failed charges by hand.
  */
 export async function setPlanForUser(userId: string, plan: SubscriptionPlan): Promise<void> {
-  await updateDoc(doc(db, LIVE_COLLECTIONS.profiles, userId), {
+  await supabase.from(LIVE_COLLECTIONS.profiles).update({
     plan: resolvePlan(plan),
-    planSince: new Date(),
-    updatedAt: new Date(),
-  });
+    plan_since: nowISO(),
+    updated_at: nowISO(),
+  }).eq('id', userId);
 }
 
 // ---------------------------------------------------------------------------
 // Plan change requests
 //
 // There is no billing yet (Phase 5), so a client cannot move themselves onto a
-// paid plan - Firestore rules block writes to profile.plan for exactly that
-// reason. Instead a client registers intent here and staff action it from the
+// paid plan - RLS blocks writes to profile.plan for exactly that reason.
+// Instead a client registers intent here and staff action it from the
 // admin users page. Honest about what it is: a request, not a purchase.
 // ---------------------------------------------------------------------------
 
@@ -140,16 +133,16 @@ export interface PlanRequest {
   createdAt?: Date;
 }
 
-function mapPlanRequest(id: string, data: DocumentData): PlanRequest {
+function mapPlanRequest(id: string, data: any): PlanRequest {
   return {
     id,
-    userId: data.userId ?? '',
-    userEmail: data.userEmail,
-    currentPlan: resolvePlan(data.currentPlan),
-    requestedPlan: resolvePlan(data.requestedPlan),
-    status: (data.status as PlanRequestStatus) ?? 'pending',
+    userId: data.user_id ?? data.userId ?? '',
+    userEmail: data.user_email ?? data.userEmail,
+    currentPlan: resolvePlan(data.current_plan ?? data.currentPlan),
+    requestedPlan: resolvePlan(data.requested_plan ?? data.requestedPlan),
+    status: data.status ?? 'pending',
     note: data.note,
-    createdAt: data.createdAt?.toDate?.() ?? undefined,
+    createdAt: data.created_at ? new Date(data.created_at) : undefined,
   };
 }
 
@@ -161,31 +154,31 @@ export async function requestPlanChange(input: {
   requestedPlan: SubscriptionPlan;
   note?: string;
 }): Promise<{ id: string }> {
-  const ref = await addDoc(collection(db, LIVE_COLLECTIONS.planRequests), {
-    userId: input.userId,
-    userEmail: input.userEmail ?? '',
-    currentPlan: input.currentPlan,
-    requestedPlan: input.requestedPlan,
-    status: 'pending' as PlanRequestStatus,
+  const { data } = await supabase.from(LIVE_COLLECTIONS.planRequests).insert({
+    user_id: input.userId,
+    user_email: input.userEmail ?? '',
+    current_plan: input.currentPlan,
+    requested_plan: input.requestedPlan,
+    status: 'pending',
     note: input.note ?? '',
-    createdAt: new Date(),
-  });
-  return { id: ref.id };
+    created_at: nowISO(),
+  }).select('id').single();
+  if (!data) throw new Error('Failed to create plan request');
+  return { id: data.id! };
 }
 
 /** The client's outstanding request, if any - so we don't invite duplicates. */
 export async function getPendingPlanRequest(userId: string): Promise<PlanRequest | null> {
   if (!userId) return null;
   try {
-    const snap = await getDocs(
-      query(
-        collection(db, LIVE_COLLECTIONS.planRequests),
-        where('userId', '==', userId),
-        where('status', '==', 'pending'),
-      ),
-    );
-    if (snap.empty) return null;
-    return mapPlanRequest(snap.docs[0].id, snap.docs[0].data());
+    const { data, error } = await supabase
+      .from(LIVE_COLLECTIONS.planRequests)
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'pending');
+    if (error) throw error;
+    if (!data || data.length === 0) return null;
+    return mapPlanRequest(data[0].id!, data[0]);
   } catch (error) {
     console.error('Failed to read plan requests:', error);
     return null;
@@ -196,11 +189,13 @@ export async function getPendingPlanRequest(userId: string): Promise<PlanRequest
 export async function getAllPendingPlanRequests(): Promise<Map<string, PlanRequest>> {
   const out = new Map<string, PlanRequest>();
   try {
-    const snap = await getDocs(
-      query(collection(db, LIVE_COLLECTIONS.planRequests), where('status', '==', 'pending')),
-    );
-    snap.docs.forEach((d) => {
-      const req = mapPlanRequest(d.id, d.data());
+    const { data, error } = await supabase
+      .from(LIVE_COLLECTIONS.planRequests)
+      .select('*')
+      .eq('status', 'pending');
+    if (error) throw error;
+    (data ?? []).forEach((d) => {
+      const req = mapPlanRequest(d.id!, d);
       out.set(req.userId, req);
     });
   } catch (error) {
@@ -214,8 +209,8 @@ export async function resolvePlanRequest(
   requestId: string,
   status: Exclude<PlanRequestStatus, 'pending'>,
 ): Promise<void> {
-  await updateDoc(doc(db, LIVE_COLLECTIONS.planRequests, requestId), {
+  await supabase.from(LIVE_COLLECTIONS.planRequests).update({
     status,
-    resolvedAt: new Date(),
-  });
+    resolved_at: nowISO(),
+  }).eq('id', requestId);
 }

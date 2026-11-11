@@ -5,9 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSystemConfigContext } from '../../contexts/SystemConfigContext';
-import { createUserWithEmailAndPassword, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { auth, db } from '../../config/firebase';
+import { supabase, nowISO } from '../../config/supabase';
 import { UserRole } from '../../types';
 import { useUsers } from '../../hooks/useFirestore';
 import toast from 'react-hot-toast';
@@ -146,13 +144,12 @@ const ManageUsers: React.FC = () => {
       }
 
       // Update user document to mark that they must change password
-      const userRef = doc(db, 'users', selectedUserForReset.id);
-      await updateDoc(userRef, {
-        mustChangePassword: true,
-        passwordResetBy: currentUser?.email || 'admin',
-        passwordResetAt: serverTimestamp(),
-        temporaryPassword: newTempPassword
-      });
+      await supabase.from('users').update({
+        must_change_password: true,
+        password_reset_by: currentUser?.email || 'admin',
+        password_reset_at: nowISO(),
+        temporary_password: newTempPassword
+      }).eq('id', selectedUserForReset.id);
 
       // Create notification for audit trail
       await createPasswordResetNotification(
@@ -164,7 +161,7 @@ const ManageUsers: React.FC = () => {
           email: selectedUserForReset.email
         },
         {
-          id: currentUser?.uid,
+          id: currentUser?.id,
           email: currentUser?.email
         },
         newTempPassword
@@ -276,30 +273,30 @@ const ManageUsers: React.FC = () => {
         jobTitle: newUserData.jobTitle
       });
       
-      // 1. Create Firebase Auth account
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        newUserData.email,
-        newUserData.temporaryPassword
-      );
-      
-      const firebaseUser = userCredential.user;
-      console.log('Firebase user created:', firebaseUser.uid);
-
-      // 2. Create admin user document in Firestore
-      const userData = {
-        uid: firebaseUser.uid,
+      // 1. Create Supabase Auth account
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: newUserData.email,
-        firstName: newUserData.firstName || '',
-        lastName: newUserData.lastName || '',
-        phoneNumber: newUserData.phone || '',
+        password: newUserData.temporaryPassword,
+      });
+      if (signUpError) throw signUpError;
+      const firebaseUser = signUpData.user;
+      if (!firebaseUser) throw new Error('Failed to create user');
+      console.log('Supabase user created:', firebaseUser.id);
+
+      // 2. Create admin user document in Supabase
+      const userData = {
+        id: firebaseUser.id,
+        email: newUserData.email,
+        first_name: newUserData.firstName || '',
+        last_name: newUserData.lastName || '',
+        phone_number: newUserData.phone || '',
         role: newUserData.role === 'super-admin' ? UserRole.SUPER_ADMIN : UserRole.ADMIN,
-        emailVerified: false,
-        twoFactorEnabled: newUserData.requireTwoFactor,
-        isActive: true,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        createdBy: currentUser?.uid || 'admin',
+        email_verified: false,
+        two_factor_enabled: newUserData.requireTwoFactor,
+        is_active: true,
+        created_at: nowISO(),
+        updated_at: nowISO(),
+        created_by: currentUser?.id || 'admin',
         // Admin-specific profile
         adminProfile: {
           department: newUserData.department || '',
@@ -315,10 +312,10 @@ const ManageUsers: React.FC = () => {
       };
 
       try {
-        await setDoc(doc(db, 'users', firebaseUser.uid), userData);
-        console.log('✅ User document created in Firestore');
+        await supabase.from('users').insert(userData);
+        console.log('✅ User document created in Supabase');
       } catch (firestoreError) {
-        console.warn('⚠️ Firestore write failed, but Firebase Auth user exists:', firestoreError);
+        console.warn('⚠️ Supabase write failed, but Auth user exists:', firestoreError);
       }
 
       // 3. Generate email with admin credentials
@@ -359,7 +356,7 @@ ${config.companyInfo.name} Administration Team
       // Create notification for audit trail
       await createAccountCreationNotification(
         {
-          id: firebaseUser.uid,
+          id: firebaseUser.id,
           firstName: newUserData.firstName,
           lastName: newUserData.lastName,
           username: newUserData.email, // Admin accounts use email as username
@@ -367,7 +364,7 @@ ${config.companyInfo.name} Administration Team
           role: newUserData.role
         },
         {
-          id: currentUser?.uid,
+          id: currentUser?.id,
           email: currentUser?.email
         },
         newUserData.temporaryPassword

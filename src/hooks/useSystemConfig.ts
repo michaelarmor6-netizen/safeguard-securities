@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { supabase } from '../config/supabase';
 import { SystemConfig } from '../types';
 
 // Default system configuration
@@ -198,40 +197,52 @@ export const useSystemConfig = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const configRef = doc(db, 'systemConfig', 'main');
-    
-    const unsubscribe = onSnapshot(
-      configRef, 
-      (doc) => {
-        try {
-          if (doc.exists()) {
-            const data = doc.data();
-            setConfig({
-              ...data,
-              updatedAt: data.updatedAt?.toDate() || new Date()
-            } as SystemConfig);
-          } else {
-            // Use default config if no document exists
-            setConfig(defaultConfig);
+    const channel = supabase
+      .channel('system-config')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'system_config',
+        },
+        (payload) => {
+          try {
+            const d = payload.new as any;
+            if (d) {
+              setConfig({
+                ...d,
+                updated_at: d.updated_at || new Date()
+              } as SystemConfig);
+            } else {
+              setConfig(defaultConfig);
+            }
+            setError(null);
+          } catch (err) {
+            console.error('Error processing system config:', err);
+            setError('Failed to load system configuration');
+            setConfig(defaultConfig); // Fallback to default
           }
-          setError(null);
-        } catch (err) {
-          console.error('Error processing system config:', err);
-          setError('Failed to load system configuration');
-          setConfig(defaultConfig); // Fallback to default
-        } finally {
-          setLoading(false);
-        }
-      },
-      (err) => {
-        console.error('Error listening to system config:', err);
-        setError('Failed to connect to system configuration');
-        setConfig(defaultConfig); // Fallback to default
-        setLoading(false);
-      }
-    );
+        },
+      )
+      .subscribe();
 
-    return () => unsubscribe();
+    // Initial fetch
+    supabase.from('system_config').select('*').eq('id', 'main').maybeSingle().then(({ data, error }) => {
+      if (error) {
+        setError('Failed to load system configuration');
+        setConfig(defaultConfig);
+      } else if (data) {
+        setConfig({ ...data, updated_at: data.updated_at || new Date() } as SystemConfig);
+      } else {
+        setConfig(defaultConfig);
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Helper functions for easier access to common config values

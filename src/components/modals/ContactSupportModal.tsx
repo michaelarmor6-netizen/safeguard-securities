@@ -4,8 +4,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSystemConfigContext } from '../../contexts/SystemConfigContext';
-import { db } from '../../config/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { supabase } from '../../config/supabase';
 import toast from 'react-hot-toast';
 import { EmailTemplateProcessor } from '../../utils/emailTemplates';
 
@@ -67,64 +66,70 @@ const ContactSupportModal: React.FC<ContactSupportModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.subject.trim() || !formData.message.trim()) {
       toast.error('Please fill in all required fields');
       return;
     }
 
     setIsSubmitting(true);
-    
+
     try {
       // Create support request object
+      const ticketId = `SUP-${Date.now().toString().slice(-6)}`;
       const supportRequest = {
         ...formData,
         user: {
           email: user?.email,
-          uid: user?.uid,
+          uid: user?.id,
           name: user?.firstName ? `${user.firstName} ${user.lastName}` : user?.email
         },
         timestamp: new Date().toISOString(),
         status: 'new',
-        ticketId: `SUP-${Date.now().toString().slice(-6)}`
+        ticket_id: ticketId
       };
 
-      // 1. Save to Firestore
-      const docRef = await addDoc(collection(db, 'support_requests'), supportRequest);
-      console.log('Support request saved to Firestore with ID:', docRef.id);
+      // 1. Save to Supabase
+      const { data: docRef, error } = await supabase
+        .from('support_requests')
+        .insert(supportRequest)
+        .select('id')
+        .single();
+      if (error) throw error;
+      console.log('Support request saved to Supabase with ID:', docRef.id);
 
       // 2. Prepare email notification details
       const adminEmail = getContactEmail(); // Get admin email from system config
       const supportEmail = config.contact.email.support || adminEmail;
-      
+
       console.log('📧 Support request details:');
-      console.log(`   Ticket ID: ${supportRequest.ticketId}`);
+      console.log(`   Ticket ID: ${supportRequest.ticket_id}`);
       console.log(`   Admin Email: ${adminEmail}`);
       console.log(`   Support Email: ${supportEmail}`);
       console.log(`   User: ${supportRequest.user.name} (${supportRequest.user.email})`);
       console.log(`   Category: ${supportRequest.category}`);
       console.log(`   Subject: ${supportRequest.subject}`);
-      
+
       // 3. Process email templates
       const templateProcessor = new EmailTemplateProcessor(config);
-      
+
       // 4. Generate auto-reply email (if enabled)
       const autoReplyUrl = templateProcessor.generateAutoReply(supportRequest, config);
-      
+
       // 5. Success notification
-      toast.success(`Support request submitted! Ticket ${supportRequest.ticketId} created.`, {
+      toast.success(`Support request submitted! Ticket ${ticketId} created.`, {
         duration: 6000,
       });
-      
+
       // 6. Open email clients for both admin notification and auto-reply
       if (navigator.userAgent.includes('Windows') || navigator.userAgent.includes('Mac')) {
         try {
           // Admin notification email (existing functionality)
-          const adminEmailSubject = encodeURIComponent(`New Support Request: ${supportRequest.subject} [${supportRequest.ticketId}]`);
+          const adminEmailSubject = encodeURIComponent(`New Support Request: ${supportRequest.subject} [${ticketId}]`);
           const adminEmailBody = encodeURIComponent(`
 New support request received:
 
-Ticket ID: ${supportRequest.ticketId}
+Ticket ID: ${ticketId}
 From: ${supportRequest.user.name} (${supportRequest.user.email})
 Category: ${supportRequest.category}
 Priority: ${supportRequest.priority}
@@ -140,10 +145,10 @@ View full details in Admin Dashboard → Support Requests
 
 ${autoReplyUrl ? '\n📧 Auto-reply email prepared. Check your email client for the customer response.' : ''}
           `);
-          
+
           // Open admin notification
           window.open(`mailto:${supportEmail}?subject=${adminEmailSubject}&body=${adminEmailBody}`, '_blank');
-          
+
           // If auto-reply is enabled, also prepare customer response
           if (autoReplyUrl) {
             setTimeout(() => {
@@ -157,15 +162,15 @@ ${autoReplyUrl ? '\n📧 Auto-reply email prepared. Check your email client for 
           console.log('Email client failed, but request saved to database');
         }
       }
-      
-      setSubmittedTicketId(supportRequest.ticketId);
+
+      setSubmittedTicketId(ticketId);
       setIsSubmitted(true);
-      
+
       // Auto-close after showing success
       setTimeout(() => {
         handleClose();
       }, 4000);
-      
+
     } catch (error) {
       toast.error('Failed to submit support request. Please try again.');
     } finally {

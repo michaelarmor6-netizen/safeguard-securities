@@ -1,6 +1,4 @@
-import { collection, doc, getDocs, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
-import { db, functions } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 import { LIVE_COLLECTIONS } from '../../config/liveCollections';
 import { strikeBelowEntryPrice } from '../../lib/optionValuation';
 
@@ -88,49 +86,44 @@ export interface StatementResult {
   summary: { clearedAmount: number; closingBalance: number | null; tradeCount: number };
 }
 
-const placeOrderOnBehalfFn = httpsCallable<PlaceOrderPayload, { orderId: string }>(functions, 'placeOrderOnBehalf');
-const fillOrderFn = httpsCallable<FillOrderPayload, FillOrderResult>(functions, 'fillOrder');
-const markOrderWorkingFn = httpsCallable<{ orderId: string }, { ok: true }>(functions, 'markOrderWorking');
-const rejectOrderFn = httpsCallable<{ orderId: string; reason: string }, { ok: true }>(functions, 'rejectOrder');
-const cancelOrderFn = httpsCallable<{ orderId: string }, { ok: true }>(functions, 'cancelOrder');
-const updateTradeContractFn = httpsCallable<UpdateTradeContractPayload, { ok: true }>(functions, 'updateTradeContract');
-const generateAccountStatementFn = httpsCallable<{ userId: string; startDate: string; endDate: string }, StatementResult>(
-  functions,
-  'generateAccountStatement',
-);
-
 export async function placeOrderOnBehalf(payload: PlaceOrderPayload) {
-  const res = await placeOrderOnBehalfFn(payload);
-  return res.data;
+  const { data, error } = await supabase.rpc('place_order_on_behalf', payload);
+  if (error) throw error;
+  return data;
 }
 
 export async function fillOrder(payload: FillOrderPayload) {
-  const res = await fillOrderFn(payload);
-  return res.data;
+  const { data, error } = await supabase.rpc('fill_order', payload);
+  if (error) throw error;
+  return data;
 }
 
 export async function markOrderWorking(orderId: string) {
-  await markOrderWorkingFn({ orderId });
+  const { error } = await supabase.rpc('mark_order_working', { order_id: orderId });
+  if (error) throw error;
 }
 
 export async function rejectOrder(orderId: string, reason: string) {
-  await rejectOrderFn({ orderId, reason });
+  const { error } = await supabase.rpc('reject_order', { order_id: orderId, reason });
+  if (error) throw error;
 }
 
 export async function cancelOrder(orderId: string) {
-  await cancelOrderFn({ orderId });
+  const { error } = await supabase.rpc('cancel_order', { order_id: orderId });
+  if (error) throw error;
 }
 
 export async function updateTradeContract(payload: UpdateTradeContractPayload) {
-  await updateTradeContractFn(payload);
+  const { error } = await supabase.rpc('update_trade_contract', payload);
+  if (error) throw error;
 }
 
 // Entry price lives on the holding and the filled order, not on the trade row.
 // Keyed by userId|SYMBOL so the trade editor can show the current entry.
 export async function loadPositionEntries(): Promise<Map<string, number>> {
-  const [holdingsSnap, ordersSnap] = await Promise.all([
-    getDocs(collection(db, LIVE_COLLECTIONS.portfolioHoldings)),
-    getDocs(collection(db, LIVE_COLLECTIONS.orders)),
+  const [holdingsResp, ordersResp] = await Promise.all([
+    supabase.from(LIVE_COLLECTIONS.portfolioHoldings).select('*'),
+    supabase.from(LIVE_COLLECTIONS.orders).select('*'),
   ]);
   const entries = new Map<string, number>();
   const take = (userId: unknown, symbol: unknown, entry: unknown) => {
@@ -138,13 +131,11 @@ export async function loadPositionEntries(): Promise<Map<string, number>> {
     const key = `${String(userId ?? '')}|${String(symbol ?? '').trim().toUpperCase()}`;
     if (price > 0 && userId && symbol) entries.set(key, price);
   };
-  for (const d of ordersSnap.docs) {
-    const data = d.data();
-    take(data.userId, data.symbol, data.entryUnderlyingPrice);
+  for (const d of ordersResp.data ?? []) {
+    take(d.user_id ?? d.userId, d.symbol, d.entry_underlying_price ?? d.entryUnderlyingPrice);
   }
-  for (const d of holdingsSnap.docs) {
-    const data = d.data();
-    take(data.userId, data.symbol, data.entryUnderlyingPrice);
+  for (const d of holdingsResp.data ?? []) {
+    take(d.user_id ?? d.userId, d.symbol, d.entry_underlying_price ?? d.entryUnderlyingPrice);
   }
   return entries;
 }
@@ -171,34 +162,44 @@ export async function correctPositionTerms(input: {
     );
   }
 
-  const terms = { strikePrice, entryUnderlyingPrice, updatedAt: serverTimestamp() };
+  const nowISO = new Date().toISOString();
+  const terms = { strike_price: strikePrice, entry_underlying_price: entryUnderlyingPrice, updated_at: nowISO };
   const writes: Promise<unknown>[] = [];
 
-  const holdingsSnap = await getDocs(
-    query(collection(db, LIVE_COLLECTIONS.portfolioHoldings), where('userId', '==', input.userId)),
-  );
-  const holdings = holdingsSnap.docs.filter((d) => String(d.data().symbol ?? '').trim().toUpperCase() === symbol);
+  const { data: holdingsResp } = await supabase
+    .from(LIVE_COLLECTIONS.portfolioHoldings)
+    .select('*')
+    .eq('user_id', input.userId);
+  const holdings = (holdingsResp ?? []).filter((d) => String(d.symbol ?? '').trim().toUpperCase() === symbol);
   if (holdings.length === 0 && !input.tradeId) {
     throw new Error(`No open ${symbol} position for this client.`);
   }
   for (const holding of holdings) {
-    writes.push(updateDoc(doc(db, LIVE_COLLECTIONS.portfolioHoldings, holding.id), terms));
+    writes.push(
+      (async () => {
+        await supabase.from(LIVE_COLLECTIONS.portfolioHoldings).update(terms).eq('id', holding.id);
+      })(),
+    );
   }
   if (input.tradeId) {
     writes.push(
-      updateDoc(doc(db, LIVE_COLLECTIONS.trades, input.tradeId), {
-        ...terms,
-        remarks: 'ADJUSTED',
-      }),
+      (async () => {
+        await supabase.from(LIVE_COLLECTIONS.trades).update({ ...terms, remarks: 'ADJUSTED' }).eq('id', input.tradeId);
+      })(),
     );
   }
   if (input.orderId) {
-    writes.push(updateDoc(doc(db, LIVE_COLLECTIONS.orders, input.orderId), terms));
+    writes.push(
+      (async () => {
+        await supabase.from(LIVE_COLLECTIONS.orders).update(terms).eq('id', input.orderId);
+      })(),
+    );
   }
   await Promise.all(writes);
 }
 
 export async function generateAccountStatement(userId: string, startDate: string, endDate: string) {
-  const res = await generateAccountStatementFn({ userId, startDate, endDate });
-  return res.data;
+  const { data, error } = await supabase.rpc('generate_account_statement', { user_id: userId, start_date: startDate, end_date: endDate });
+  if (error) throw error;
+  return data;
 }

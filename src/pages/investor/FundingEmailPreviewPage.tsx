@@ -158,7 +158,7 @@ export default function FundingEmailPreviewPage() {
                 onClick={async () => {
                   try {
                     await markFundingEmailSent(request.id);
-                    if (user) logAction(user.uid, profile?.email ?? '', 'Funding details emailed manually', `${request.userEmail ?? request.userId}: ${requestReference(request)}`);
+                    if (user) logAction(user.id, profile?.email ?? '', 'Funding details emailed manually', `${request.userEmail ?? request.userId}: ${requestReference(request)}`);
                     toast.success('Marked as emailed');
                     setRequest({ ...request, emailSentAt: new Date() });
                   } catch (e) {

@@ -29,6 +29,7 @@ import SearchableCountrySelect from '../../components/ui/SearchableCountrySelect
 import { UserRole } from '../../types';
 import toast from 'react-hot-toast';
 import ClientAccountEmailService from '../../utils/clientAccountEmailService';
+import { supabase, nowISO } from '../../config/supabase';
 
 interface ClientData {
   // Country & Residency
@@ -426,21 +427,20 @@ const ClientAccountOpening: React.FC = () => {
       
       setClientData(finalClientData);
       
-      // Import Firebase functions
-      const { createUserWithEmailAndPassword } = await import('firebase/auth');
-      const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
-      const { auth, db } = await import('../../config/firebase');
-      
-      // 1. Create Firebase Auth user
-      console.log('Creating Firebase Auth user...');
-      const userCredential = await createUserWithEmailAndPassword(auth, finalClientData.email, temporaryPassword);
-      const firebaseUser = userCredential.user;
+      // 1. Create Supabase Auth user
+      console.log('Creating Supabase Auth user...');
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: finalClientData.email,
+        password: temporaryPassword,
+      });
+      if (signUpError) throw signUpError;
+      const firebaseUser = signUpData.user;
+      if (!firebaseUser) throw new Error('Failed to create user');
       
       toast.success('✅ User authentication created successfully!');
       
-      // 2. Create user document in Firestore
+      // 2. Create user document in Supabase
       const userData = {
-        uid: firebaseUser.uid,
         email: finalClientData.email,
         firstName: finalClientData.firstName,
         middleName: finalClientData.middleName || '',
@@ -493,25 +493,27 @@ const ClientAccountOpening: React.FC = () => {
         
         // System fields
         role: UserRole.CLIENT,
-        isActive: true,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        createdBy: currentUser?.uid || 'admin',
+        is_active: true,
+        created_at: nowISO(),
+        updated_at: nowISO(),
+        created_by: currentUser?.id || 'admin',
         
         // Login credentials
         username: finalClientData.username,
-        temporaryPassword: temporaryPassword,
-        mustChangePassword: true
+        temporary_password: temporaryPassword,
+        must_change_password: true
       };
       
-      const userDocRef = doc(db, 'users', firebaseUser.uid);
-      await setDoc(userDocRef, userData);
+      await supabase.from('users').insert({
+        id: firebaseUser.id,
+        ...userData
+      });
       
       toast.success('✅ User profile created successfully!');
       
       // 3. Create bank account
       const bankAccountData = {
-        userId: firebaseUser.uid,
+        user_id: firebaseUser.id,
         accountNumber: accountNumber,
         routingNumber: routingNumber,
         accountType: finalClientData.accountType,
@@ -552,21 +554,25 @@ const ClientAccountOpening: React.FC = () => {
         },
         
         // System fields
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        createdBy: currentUser?.uid || 'admin'
+        created_at: nowISO(),
+        updated_at: nowISO(),
+        created_by: currentUser?.id || 'admin'
       };
       
-      const accountDocRef = doc(db, 'accounts', `${firebaseUser.uid}_${finalClientData.accountType}`);
-      await setDoc(accountDocRef, bankAccountData);
+      await supabase.from('accounts').insert({
+        id: `${firebaseUser.id}_${finalClientData.accountType}`,
+        ...bankAccountData,
+        created_at: nowISO(),
+        updated_at: nowISO()
+      });
       
       // Clear any old localStorage accounts and store correct data
-      const localAccountKey = `temp_account_${firebaseUser.uid}`;
+      const localAccountKey = `temp_account_${firebaseUser.id}`;
       localStorage.removeItem(localAccountKey); // Clear old data first
       
       const localAccountData = {
-        id: `${firebaseUser.uid}_${finalClientData.accountType}`,
-        userId: firebaseUser.uid,
+        id: `${firebaseUser.id}_${finalClientData.accountType}`,
+        user_id: firebaseUser.id,
         accountNumber: accountNumber,
         routingNumber: routingNumber,
         accountType: finalClientData.accountType,
@@ -608,9 +614,9 @@ const ClientAccountOpening: React.FC = () => {
       // 5. Create initial transaction record for deposit
       if (parseFloat(finalClientData.initialDeposit) > 0) {
         const transactionData = {
-          userId: firebaseUser.uid,
-          accountId: `${firebaseUser.uid}_${finalClientData.accountType}`,
-          transactionId: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          user_id: firebaseUser.id,
+          account_id: `${firebaseUser.id}_${finalClientData.accountType}`,
+          transaction_id: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           type: 'deposit',
           category: 'initial_deposit',
           amount: parseFloat(finalClientData.initialDeposit),
@@ -625,13 +631,12 @@ const ClientAccountOpening: React.FC = () => {
           },
           
           // System fields
-          createdAt: serverTimestamp(),
-          processedAt: serverTimestamp(),
-          createdBy: currentUser?.uid || 'admin'
+          created_at: nowISO(),
+          processed_at: nowISO(),
+          created_by: currentUser?.id || 'admin'
         };
         
-        const transactionDocRef = doc(db, 'transactions', transactionData.transactionId);
-        await setDoc(transactionDocRef, transactionData);
+        await supabase.from('transactions').insert(transactionData);
         
         toast.success('✅ Initial deposit transaction recorded!');
       }

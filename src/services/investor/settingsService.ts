@@ -1,5 +1,4 @@
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase, nowISO } from '../../config/supabase';
 import { LIVE_COLLECTIONS } from '../../config/liveCollections';
 
 const GLOBAL_DOC_ID = 'global';
@@ -77,39 +76,43 @@ export const DEFAULTS: PlatformSettings = {
 };
 
 export async function getPlatformSettings(): Promise<PlatformSettings> {
-  const snap = await getDoc(doc(db, LIVE_COLLECTIONS.settings, GLOBAL_DOC_ID));
-  if (!snap.exists()) return DEFAULTS;
-  const data = snap.data();
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.settings)
+    .select('*')
+    .eq('id', GLOBAL_DOC_ID)
+    .maybeSingle();
+  if (error || !data) return DEFAULTS;
+  const d = data;
   return {
-    announcementEnabled: Boolean(data.announcementEnabled),
-    announcementMessage: data.announcementMessage ?? DEFAULTS.announcementMessage,
-    platformName: data.platformName ?? DEFAULTS.platformName,
-    defaultCurrency: data.defaultCurrency ?? DEFAULTS.defaultCurrency,
-    statementFooterText: data.statementFooterText ?? DEFAULTS.statementFooterText,
-    deskTimezone: data.deskTimezone ?? DEFAULTS.deskTimezone,
-    logoUrl: data.logoUrl ?? DEFAULTS.logoUrl,
-    brandPrimaryColor: data.brandPrimaryColor ?? DEFAULTS.brandPrimaryColor,
-    brandAccentColor: data.brandAccentColor ?? DEFAULTS.brandAccentColor,
-    defaultLanguage: data.defaultLanguage ?? DEFAULTS.defaultLanguage,
-    supportedLanguages: Array.isArray(data.supportedLanguages) ? data.supportedLanguages : DEFAULTS.supportedLanguages,
-    notifyOnNewApplicant: data.notifyOnNewApplicant ?? DEFAULTS.notifyOnNewApplicant,
-    notifyOnFundingRequest: data.notifyOnFundingRequest ?? DEFAULTS.notifyOnFundingRequest,
-    notifyOnLargeTrade: data.notifyOnLargeTrade ?? DEFAULTS.notifyOnLargeTrade,
-    largeTradeThreshold: Number(data.largeTradeThreshold ?? DEFAULTS.largeTradeThreshold),
-    sessionTimeoutMinutes: Number(data.sessionTimeoutMinutes ?? DEFAULTS.sessionTimeoutMinutes),
-    minPasswordLength: Number(data.minPasswordLength ?? DEFAULTS.minPasswordLength),
-    welcomeEmailSubjectOverride: data.welcomeEmailSubjectOverride ?? DEFAULTS.welcomeEmailSubjectOverride,
-    welcomeEmailIntroOverride: data.welcomeEmailIntroOverride ?? DEFAULTS.welcomeEmailIntroOverride,
-    invoicePrefix: String(data.invoicePrefix ?? DEFAULTS.invoicePrefix),
-    invoiceIncludeYear: data.invoiceIncludeYear !== false,
-    invoicePadLength: Number(data.invoicePadLength ?? DEFAULTS.invoicePadLength),
+    announcementEnabled: Boolean(d.announcement_enabled ?? d.announcementEnabled),
+    announcementMessage: d.announcement_message ?? d.announcementMessage ?? DEFAULTS.announcementMessage,
+    platformName: d.platform_name ?? d.platformName ?? DEFAULTS.platformName,
+    defaultCurrency: d.default_currency ?? d.defaultCurrency ?? DEFAULTS.defaultCurrency,
+    statementFooterText: d.statement_footer_text ?? d.statementFooterText ?? DEFAULTS.statementFooterText,
+    deskTimezone: d.desk_timezone ?? d.deskTimezone ?? DEFAULTS.deskTimezone,
+    logoUrl: d.logo_url ?? d.logoUrl ?? DEFAULTS.logoUrl,
+    brandPrimaryColor: d.brand_primary_color ?? d.brandPrimaryColor ?? DEFAULTS.brandPrimaryColor,
+    brandAccentColor: d.brand_accent_color ?? d.brandAccentColor ?? DEFAULTS.brandAccentColor,
+    defaultLanguage: d.default_language ?? d.defaultLanguage ?? DEFAULTS.defaultLanguage,
+    supportedLanguages: Array.isArray(d.supported_languages ?? d.supportedLanguages) ? (d.supported_languages ?? d.supportedLanguages) : DEFAULTS.supportedLanguages,
+    notifyOnNewApplicant: d.notify_on_new_applicant ?? d.notifyOnNewApplicant ?? DEFAULTS.notifyOnNewApplicant,
+    notifyOnFundingRequest: d.notify_on_funding_request ?? d.notifyOnFundingRequest ?? DEFAULTS.notifyOnFundingRequest,
+    notifyOnLargeTrade: d.notify_on_large_trade ?? d.notifyOnLargeTrade ?? DEFAULTS.notifyOnLargeTrade,
+    largeTradeThreshold: Number(d.large_trade_threshold ?? d.largeTradeThreshold ?? DEFAULTS.largeTradeThreshold),
+    sessionTimeoutMinutes: Number(d.session_timeout_minutes ?? d.sessionTimeoutMinutes ?? DEFAULTS.sessionTimeoutMinutes),
+    minPasswordLength: Number(d.min_password_length ?? d.minPasswordLength ?? DEFAULTS.minPasswordLength),
+    welcomeEmailSubjectOverride: d.welcome_email_subject_override ?? d.welcomeEmailSubjectOverride ?? DEFAULTS.welcomeEmailSubjectOverride,
+    welcomeEmailIntroOverride: d.welcome_email_intro_override ?? d.welcomeEmailIntroOverride ?? DEFAULTS.welcomeEmailIntroOverride,
+    invoicePrefix: String(d.invoice_prefix ?? d.invoicePrefix ?? DEFAULTS.invoicePrefix),
+    invoiceIncludeYear: d.invoice_include_year !== false,
+    invoicePadLength: Number(d.invoice_pad_length ?? d.invoicePadLength ?? DEFAULTS.invoicePadLength),
   };
 }
 
 export async function updatePlatformSettings(patch: Partial<PlatformSettings>) {
-  await setDoc(
-    doc(db, LIVE_COLLECTIONS.settings, GLOBAL_DOC_ID),
-    { ...patch, updatedAt: new Date() },
-    { merge: true },
-  );
+  await supabase.from(LIVE_COLLECTIONS.settings).upsert({
+    id: GLOBAL_DOC_ID,
+    ...patch,
+    updated_at: nowISO(),
+  });
 }

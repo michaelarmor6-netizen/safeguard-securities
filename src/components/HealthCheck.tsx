@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { supabase } from '../config/supabase';
 
 interface HealthCheckProps {
   className?: string;
@@ -12,7 +13,7 @@ const HealthCheck: React.FC<HealthCheckProps> = ({ className = '' }) => {
   React.useEffect(() => {
     const checkHealth = async () => {
       const checks = {
-        firebase: await checkFirebaseConnection(),
+        supabase: await checkSupabaseConnection(),
         environment: checkEnvironmentVariables(),
         build: checkBuildConfiguration(),
         security: checkSecuritySettings(),
@@ -35,10 +36,10 @@ const HealthCheck: React.FC<HealthCheckProps> = ({ className = '' }) => {
     checkHealth();
   }, []);
 
-  const checkFirebaseConnection = async (): Promise<boolean> => {
+  const checkSupabaseConnection = async (): Promise<boolean> => {
     try {
-      const { auth } = await import('../config/firebase');
-      return !!auth.app;
+      const { error } = await supabase.from('system_config').select('id').limit(1);
+      return !error;
     } catch {
       return false;
     }
@@ -46,29 +47,25 @@ const HealthCheck: React.FC<HealthCheckProps> = ({ className = '' }) => {
 
   const checkEnvironmentVariables = (): boolean => {
     const requiredVars = [
-      'VITE_FIREBASE_API_KEY',
-      'VITE_FIREBASE_AUTH_DOMAIN',
-      'VITE_FIREBASE_PROJECT_ID',
-      'VITE_FIREBASE_STORAGE_BUCKET',
-      'VITE_FIREBASE_MESSAGING_SENDER_ID',
-      'VITE_FIREBASE_APP_ID',
+      'VITE_SUPABASE_URL',
+      'VITE_SUPABASE_ANON_KEY',
     ];
 
-    return requiredVars.every(varName => 
-      import.meta.env[varName] && 
+    return requiredVars.every(varName =>
+      import.meta.env[varName] &&
       import.meta.env[varName].length > 0
     );
   };
 
   const checkBuildConfiguration = (): boolean => {
-    return import.meta.env.PROD ? 
-      import.meta.env.VITE_DEBUG_MODE === 'false' : 
+    return import.meta.env.PROD ?
+      import.meta.env.VITE_DEBUG_MODE === 'false' :
       true;
   };
 
   const checkSecuritySettings = (): boolean => {
-    return import.meta.env.PROD ? 
-      import.meta.env.VITE_ENFORCE_HTTPS === 'true' : 
+    return import.meta.env.PROD ?
+      import.meta.env.VITE_ENFORCE_HTTPS === 'true' :
       true;
   };
 
@@ -109,7 +106,7 @@ const HealthCheck: React.FC<HealthCheckProps> = ({ className = '' }) => {
         {getStatusIcon()}
         <h3 className="font-medium">System Health</h3>
       </div>
-      
+
       <div className="space-y-1 text-xs">
         {Object.entries(details).map(([check, healthy]) => (
           <div key={check} className="flex items-center gap-2">

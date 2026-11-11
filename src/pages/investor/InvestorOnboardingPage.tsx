@@ -24,11 +24,11 @@ export default function InvestorOnboardingPage() {
 
     let idDocumentUrl: string | undefined;
     if (idFile) {
-      idDocumentUrl = await uploadKycDocument(user.uid, idFile);
+      idDocumentUrl = await uploadKycDocument(user.id, idFile);
     }
 
     await submitKyc({
-      userId: user.uid,
+      userId: user.id,
       userEmail: core.email,
       fullName: `${core.firstName} ${core.lastName}`.trim(),
       dateOfBirth: core.dateOfBirth,
@@ -39,7 +39,7 @@ export default function InvestorOnboardingPage() {
       idDocumentUrl,
     });
 
-    await submitClientOnboarding(user.uid, {
+    await submitClientOnboarding(user.id, {
       firstName: core.firstName,
       middleName: core.middleName,
       lastName: core.lastName,
@@ -62,7 +62,7 @@ export default function InvestorOnboardingPage() {
 
   const handleSkip = async () => {
     try {
-      await skipOnboarding(user.uid);
+      await skipOnboarding(user.id);
       await refreshProfile();
       toast('You can finish your profile anytime from the workspace.');
       navigate('/activation');

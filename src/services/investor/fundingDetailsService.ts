@@ -1,11 +1,10 @@
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase, nowISO } from '../../config/supabase';
 import { LIVE_COLLECTIONS } from '../../config/liveCollections';
 
 // Admin-configurable funding (deposit) instructions shown to clients and
 // emailed by the functions-accounts trigger after a request is approved.
 // Stored at platformSettings/fundingDetails - readable by any signed-in
-// user (rules), writable by admins only.
+// user (RLS), writable by admins only.
 const FUNDING_DETAILS_DOC_ID = 'fundingDetails';
 
 export interface CryptoWallet {
@@ -62,41 +61,45 @@ export const FUNDING_DETAILS_DEFAULTS: FundingDetails = {
 
 // Human-facing reference the client must quote on their wire/transfer memo so
 // finance can match the incoming payment to the request. Derived from the
-// Firestore doc id so it needs no extra field and works for legacy rows.
+// platform settings doc id so it needs no extra field and works for legacy rows.
 // DUPLICATED in functions-accounts/src/index.ts (fundingReference) - change both.
 export function fundingReference(requestId: string): string {
   return 'SG-' + requestId.slice(0, 8).toUpperCase();
 }
 
 export async function getFundingDetails(): Promise<FundingDetails> {
-  const snap = await getDoc(doc(db, LIVE_COLLECTIONS.settings, FUNDING_DETAILS_DOC_ID));
-  if (!snap.exists()) return FUNDING_DETAILS_DEFAULTS;
-  const data = snap.data();
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.settings)
+    .select('*')
+    .eq('id', FUNDING_DETAILS_DOC_ID)
+    .maybeSingle();
+  if (error || !data) return FUNDING_DETAILS_DEFAULTS;
+  const d = data;
   return {
-    bankEnabled: Boolean(data.bankEnabled),
-    bankName: data.bankName ?? '',
-    bankAddress: data.bankAddress ?? '',
-    bankSwift: data.bankSwift ?? '',
-    bankAccountName: data.bankAccountName ?? '',
-    bankAccountNumber: data.bankAccountNumber ?? '',
-    beneficiaryAddress: data.beneficiaryAddress ?? '',
-    bankRoutingOrIban: data.bankRoutingOrIban ?? '',
-    paymentReason: data.paymentReason ?? FUNDING_DETAILS_DEFAULTS.paymentReason,
-    cryptoEnabled: Boolean(data.cryptoEnabled),
-    cryptoWallets: Array.isArray(data.cryptoWallets)
-      ? data.cryptoWallets.map((w: Partial<CryptoWallet>) => ({
+    bankEnabled: Boolean(d.bank_enabled ?? d.bankEnabled),
+    bankName: d.bank_name ?? d.bankName ?? '',
+    bankAddress: d.bank_address ?? d.bankAddress ?? '',
+    bankSwift: d.bank_swift ?? d.bankSwift ?? '',
+    bankAccountName: d.bank_account_name ?? d.bankAccountName ?? '',
+    bankAccountNumber: d.bank_account_number ?? d.bankAccountNumber ?? '',
+    beneficiaryAddress: d.beneficiary_address ?? d.beneficiaryAddress ?? '',
+    bankRoutingOrIban: d.bank_routing_or_iban ?? d.bankRoutingOrIban ?? '',
+    paymentReason: d.payment_reason ?? d.paymentReason ?? FUNDING_DETAILS_DEFAULTS.paymentReason,
+    cryptoEnabled: Boolean(d.crypto_enabled ?? d.cryptoEnabled),
+    cryptoWallets: Array.isArray(d.crypto_wallets ?? d.cryptoWallets)
+      ? (d.crypto_wallets ?? d.cryptoWallets).map((w: any) => ({
           asset: w.asset ?? '',
           network: w.network ?? '',
           address: w.address ?? '',
           memo: w.memo ?? '',
         }))
       : [],
-    extraInstructions: data.extraInstructions ?? '',
-    emailSubject: data.emailSubject ?? FUNDING_DETAILS_DEFAULTS.emailSubject,
-    emailIntro: data.emailIntro ?? FUNDING_DETAILS_DEFAULTS.emailIntro,
-    supportEmail: data.supportEmail ?? FUNDING_DETAILS_DEFAULTS.supportEmail,
-    supportPhone: data.supportPhone ?? FUNDING_DETAILS_DEFAULTS.supportPhone,
-    companyAddress: data.companyAddress ?? FUNDING_DETAILS_DEFAULTS.companyAddress,
+    extraInstructions: d.extra_instructions ?? d.extraInstructions ?? '',
+    emailSubject: d.email_subject ?? d.emailSubject ?? FUNDING_DETAILS_DEFAULTS.emailSubject,
+    emailIntro: d.email_intro ?? d.emailIntro ?? FUNDING_DETAILS_DEFAULTS.emailIntro,
+    supportEmail: d.support_email ?? d.supportEmail ?? FUNDING_DETAILS_DEFAULTS.supportEmail,
+    supportPhone: d.support_phone ?? d.supportPhone ?? FUNDING_DETAILS_DEFAULTS.supportPhone,
+    companyAddress: d.company_address ?? d.companyAddress ?? FUNDING_DETAILS_DEFAULTS.companyAddress,
   };
 }
 
@@ -121,11 +124,11 @@ export function paymentReasonLine(d: FundingDetails, reference: string): string 
 }
 
 export async function updateFundingDetails(details: FundingDetails): Promise<void> {
-  await setDoc(
-    doc(db, LIVE_COLLECTIONS.settings, FUNDING_DETAILS_DOC_ID),
-    { ...details, updatedAt: new Date() },
-    { merge: true },
-  );
+  await supabase.from(LIVE_COLLECTIONS.settings).upsert({
+    id: FUNDING_DETAILS_DOC_ID,
+    ...details,
+    updated_at: nowISO(),
+  });
 }
 
 // Plain-text email body for the manual send path: the admin Funding page
@@ -181,8 +184,6 @@ export function renderEmailSubject(d: FundingDetails, reference: string, platfor
 // SafeGuard welcome-email template (navy #003d82 / green accents, logo in
 // header AND footer). Layout is fixed here; the copy (subject, intro, contact
 // block) comes from the admin-configurable FundingDetails fields above.
-// MIRRORED in functions-accounts/src/index.ts (buildFundingEmailHtml) for the
-// auto-send trigger - change both.
 function escHtml(v: unknown): string {
   return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -303,4 +304,3 @@ export function buildFundingEmailHtml(p: FundingEmailHtmlParams): string {
 </body>
 </html>`;
 }
-

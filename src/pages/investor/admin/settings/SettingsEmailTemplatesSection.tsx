@@ -47,7 +47,7 @@ export default function SettingsEmailTemplatesSection() {
         welcomeEmailSubjectOverride: form.welcomeEmailSubjectOverride.trim(),
         welcomeEmailIntroOverride: form.welcomeEmailIntroOverride.trim(),
       });
-      if (user) logAction(user.uid, profile?.email ?? '', 'Welcome email template updated');
+      if (user) logAction(user.id, profile?.email ?? '', 'Welcome email template updated');
       toast.success('Saved — new admin-created accounts will use this template');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save');

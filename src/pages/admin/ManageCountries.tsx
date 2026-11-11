@@ -19,19 +19,7 @@ import {
   MoreVertical
 } from 'lucide-react';
 import AdminLayout from '../../components/Layout/AdminLayout';
-import { 
-  collection, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  query, 
-  orderBy,
-  where,
-  writeBatch
-} from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase, nowISO } from '../../config/supabase';
 import toast from 'react-hot-toast';
 import { countries as defaultCountries } from '../../utils/countries';
 
@@ -66,18 +54,12 @@ const ManageCountries: React.FC = () => {
   const loadCountries = async () => {
     try {
       setLoading(true);
-      const countriesRef = collection(db, 'countries');
-      const q = query(countriesRef, orderBy('name'));
-      const querySnapshot = await getDocs(q);
-      
-      const loadedCountries = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate(),
-      })) as Country[];
-
-      setCountries(loadedCountries);
+      const { data, error } = await supabase
+        .from('countries')
+        .select('*')
+        .order('name', { ascending: true });
+      if (error) throw error;
+      setCountries((data ?? []) as Country[]);
     } catch (error) {
       console.error('Error loading countries:', error);
       toast.error('Failed to load countries');
@@ -89,24 +71,19 @@ const ManageCountries: React.FC = () => {
   // Initialize with default countries if none exist
   const initializeCountries = async () => {
     try {
-      const countriesRef = collection(db, 'countries');
-      const querySnapshot = await getDocs(countriesRef);
+      const { data, error } = await supabase.from('countries').select('id');
+      if (error) throw error;
       
-      if (querySnapshot.empty) {
-        const batch = writeBatch(db);
-        
-        defaultCountries.forEach((country) => {
-          const countryRef = doc(countriesRef);
-          batch.set(countryRef, {
+      if (!data || data.length === 0) {
+        await supabase.from('countries').insert(
+          defaultCountries.map((country) => ({
             code: country.code,
             name: country.name,
             enabled: true,
-            createdAt: new Date(),
-            updatedAt: new Date()
-          });
-        });
-
-        await batch.commit();
+            created_at: nowISO(),
+            updated_at: nowISO(),
+          }))
+        );
         toast.success(`Initialized ${defaultCountries.length} countries`);
         loadCountries();
       } else {
@@ -159,13 +136,12 @@ const ManageCountries: React.FC = () => {
         return;
       }
 
-      const countriesRef = collection(db, 'countries');
-      await addDoc(countriesRef, {
+      await supabase.from('countries').insert({
         code: formData.code.toUpperCase(),
         name: formData.name,
         enabled: formData.enabled,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        created_at: nowISO(),
+        updated_at: nowISO(),
       });
 
       toast.success('Country added successfully');
@@ -183,13 +159,12 @@ const ManageCountries: React.FC = () => {
     try {
       if (!editingCountry || !editingCountry.id) return;
 
-      const countryRef = doc(db, 'countries', editingCountry.id);
-      await updateDoc(countryRef, {
+      await supabase.from('countries').update({
         code: editingCountry.code.toUpperCase(),
         name: editingCountry.name,
         enabled: editingCountry.enabled,
-        updatedAt: new Date()
-      });
+        updated_at: nowISO()
+      }).eq('id', editingCountry.id);
 
       toast.success('Country updated successfully');
       setEditingCountry(null);
@@ -207,8 +182,7 @@ const ManageCountries: React.FC = () => {
     }
 
     try {
-      const countryRef = doc(db, 'countries', countryId);
-      await deleteDoc(countryRef);
+      await supabase.from('countries').delete().eq('id', countryId);
       toast.success('Country deleted successfully');
       loadCountries();
     } catch (error) {
@@ -225,16 +199,10 @@ const ManageCountries: React.FC = () => {
     }
 
     try {
-      const batch = writeBatch(db);
-      selectedCountries.forEach(countryId => {
-        const countryRef = doc(db, 'countries', countryId);
-        batch.update(countryRef, { 
-          enabled: enable,
-          updatedAt: new Date()
-        });
-      });
-
-      await batch.commit();
+      await supabase.from('countries').update({ 
+        enabled: enable,
+        updated_at: nowISO()
+      }).in('id', selectedCountries);
       toast.success(`${selectedCountries.length} countries ${enable ? 'enabled' : 'disabled'}`);
       setSelectedCountries([]);
       loadCountries();

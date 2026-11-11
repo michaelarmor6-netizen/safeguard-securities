@@ -1,20 +1,4 @@
-import {
-  arrayUnion,
-  collection,
-  deleteField,
-  doc,
-  getDoc,
-  getDocs,
-  orderBy,
-  query,
-  runTransaction,
-  setDoc,
-  updateDoc,
-  where,
-  type DocumentData,
-} from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { auth, db, storage } from '../../config/firebase';
+import { supabase, nowISO } from '../../config/supabase';
 import {
   PROOF_ACCEPT,
   PROOF_MAX_BYTES,
@@ -22,6 +6,8 @@ import {
 } from './fundingService';
 import { LIVE_COLLECTIONS } from '../../config/liveCollections';
 import { getPlatformSettings, DEFAULTS } from './settingsService';
+
+const PROOF_BUCKET = 'payment-proofs';
 
 export interface InvoiceNumbering {
   prefix: string;
@@ -64,8 +50,8 @@ export async function getInvoiceNumbering(): Promise<InvoiceNumbering> {
 }
 
 export async function getInvoiceNextSequence(includeYear: boolean): Promise<number> {
-  const snap = await getDoc(doc(db, 'counters', invoiceCounterId(includeYear)));
-  const last = snap.exists() ? Number(snap.data().value ?? 0) : 0;
+  const { data } = await supabase.from('counters').select('value').eq('id', invoiceCounterId(includeYear)).maybeSingle();
+  const last = data ? Number(data.value ?? 0) : 0;
   return last + 1;
 }
 
@@ -73,9 +59,7 @@ export async function getInvoiceNextSequence(includeYear: boolean): Promise<numb
 export async function setInvoiceNextSequence(includeYear: boolean, nextSequence: number): Promise<void> {
   const n = Math.floor(Number(nextSequence) || 1);
   if (n < 1) throw new Error('Next sequence must be at least 1.');
-  await runTransaction(db, async (tx) => {
-    tx.set(doc(db, 'counters', invoiceCounterId(includeYear)), { value: n - 1 });
-  });
+  await supabase.from('counters').upsert({ id: invoiceCounterId(includeYear), value: n - 1 });
 }
 
 export type InvoiceStatus = 'issued' | 'sent' | 'paid' | 'void';
@@ -165,46 +149,46 @@ function mapLineItems(raw: unknown): InvoiceLineItem[] {
   }));
 }
 
-function mapInvoice(id: string, data: DocumentData): StaffInvoice {
+function mapInvoice(id: string, data: any): StaffInvoice {
   return {
     id,
     number: data.number ?? '',
-    userId: data.userId ?? '',
-    billToName: data.billToName ?? '',
-    billToEmail: data.billToEmail ?? '',
-    billToCompany: data.billToCompany,
-    billToAddress: data.billToAddress,
+    userId: data.user_id ?? data.userId ?? '',
+    billToName: data.bill_to_name ?? data.billToName ?? '',
+    billToEmail: data.bill_to_email ?? data.billToEmail ?? '',
+    billToCompany: data.bill_to_company ?? data.billToCompany,
+    billToAddress: data.bill_to_address ?? data.billToAddress,
     currency: data.currency ?? 'USD',
-    lineItems: mapLineItems(data.lineItems),
-    taxRate: Number(data.taxRate ?? 0),
-    taxLabel: data.taxLabel ?? 'Tax',
+    lineItems: mapLineItems(data.line_items ?? data.lineItems),
+    taxRate: Number(data.tax_rate ?? data.taxRate ?? 0),
+    taxLabel: data.tax_label ?? data.taxLabel ?? 'Tax',
     notes: data.notes,
-    paymentTerms: data.paymentTerms,
-    dueDate: data.dueDate?.toDate?.(),
-    includePaymentInstructions: data.includePaymentInstructions === true,
-    sendMode: data.sendMode === 'manual' ? 'manual' : 'auto',
+    paymentTerms: data.payment_terms ?? data.paymentTerms,
+    dueDate: data.due_date ?? data.dueDate ? new Date(data.due_date ?? data.dueDate) : undefined,
+    includePaymentInstructions: data.include_payment_instructions === true,
+    sendMode: data.send_mode === 'manual' ? 'manual' : 'auto',
     status: (['issued', 'sent', 'paid', 'void'] as InvoiceStatus[]).includes(data.status)
       ? data.status
       : 'issued',
-    issuedAt: data.issuedAt?.toDate?.(),
-    createdAt: data.createdAt?.toDate?.(),
-    updatedAt: data.updatedAt?.toDate?.(),
-    createdByUid: data.createdByUid ?? '',
-    createdByEmail: data.createdByEmail ?? '',
-    emailSentAt: data.emailSentAt?.toDate?.(),
-    emailError: data.emailError,
-    paymentClaimedAt: data.paymentClaimedAt?.toDate?.(),
-    paymentProofs: Array.isArray(data.paymentProofs)
-      ? data.paymentProofs.map((p: DocumentData) => ({
+    issuedAt: data.issued_at ? new Date(data.issued_at) : undefined,
+    createdAt: data.created_at ? new Date(data.created_at) : undefined,
+    updatedAt: data.updated_at ? new Date(data.updated_at) : undefined,
+    createdByUid: data.created_by_uid ?? data.createdByUid ?? '',
+    createdByEmail: data.created_by_email ?? data.createdByEmail ?? '',
+    emailSentAt: data.email_sent_at ? new Date(data.email_sent_at) : undefined,
+    emailError: data.email_error,
+    paymentClaimedAt: data.payment_claimed_at ? new Date(data.payment_claimed_at) : undefined,
+    paymentProofs: Array.isArray(data.payment_proofs ?? data.paymentProofs)
+      ? (data.payment_proofs ?? data.paymentProofs).map((p: any) => ({
           name: String(p.name ?? 'receipt'),
           url: String(p.url ?? ''),
           path: String(p.path ?? ''),
           size: Number(p.size ?? 0),
-          contentType: String(p.contentType ?? ''),
-          uploadedAt: p.uploadedAt?.toDate?.(),
+          contentType: String(p.content_type ?? p.contentType ?? ''),
+          uploadedAt: p.uploaded_at ? new Date(p.uploaded_at) : undefined,
         }))
       : [],
-    paidAt: data.paidAt?.toDate?.(),
+    paidAt: data.paid_at ? new Date(data.paid_at) : undefined,
   };
 }
 
@@ -220,123 +204,121 @@ export async function createStaffInvoice(input: CreateInvoiceInput): Promise<str
   const now = new Date();
   const year = now.getFullYear();
   const numbering = await getInvoiceNumbering();
-  const counterRef = doc(db, 'counters', invoiceCounterId(numbering.includeYear, year));
-  const invoiceRef = doc(collection(db, LIVE_COLLECTIONS.invoices));
-  let issuedNumber = '';
+  const counterId = invoiceCounterId(numbering.includeYear, year);
+  // Read current counter value, then increment (best-effort sequential).
+  const { data: counter } = await supabase.from('counters').select('value').eq('id', counterId).maybeSingle();
+  const next = (counter ? Number(counter.value ?? 0) : 0) + 1;
+  const number = formatInvoiceNumber(numbering, next, year);
+  await supabase.from('counters').upsert({ id: counterId, value: next });
 
-  await runTransaction(db, async (tx) => {
-    const counterSnap = await tx.get(counterRef);
-    const next = (counterSnap.exists() ? Number(counterSnap.data().value ?? 0) : 0) + 1;
-    const number = formatInvoiceNumber(numbering, next, year);
-    tx.set(counterRef, { value: next });
-    tx.set(invoiceRef, {
-      number,
-      userId: input.userId,
-      billToName: input.billToName.trim(),
-      billToEmail: input.billToEmail.trim().toLowerCase(),
-      billToCompany: input.billToCompany?.trim() || null,
-      billToAddress: input.billToAddress?.trim() || null,
-      currency: input.currency || 'USD',
-      lineItems: items,
-      taxRate: Number(input.taxRate) || 0,
-      taxLabel: input.taxLabel.trim() || 'Tax',
-      notes: input.notes?.trim() || null,
-      paymentTerms: input.paymentTerms?.trim() || null,
-      dueDate: input.dueDate ?? null,
-      includePaymentInstructions: input.includePaymentInstructions,
-      sendMode: input.sendMode,
-      status: 'issued',
-      issuedAt: now,
-      createdAt: now,
-      createdByUid: input.createdByUid,
-      createdByEmail: input.createdByEmail,
-    });
-    issuedNumber = number;
-  });
+  const { data } = await supabase.from(LIVE_COLLECTIONS.invoices).insert({
+    number,
+    user_id: input.userId,
+    bill_to_name: input.billToName.trim(),
+    bill_to_email: input.billToEmail.trim().toLowerCase(),
+    bill_to_company: input.billToCompany?.trim() || null,
+    bill_to_address: input.billToAddress?.trim() || null,
+    currency: input.currency || 'USD',
+    line_items: items,
+    tax_rate: Number(input.taxRate) || 0,
+    tax_label: input.taxLabel.trim() || 'Tax',
+    notes: input.notes?.trim() || null,
+    payment_terms: input.paymentTerms?.trim() || null,
+    due_date: input.dueDate ?? null,
+    include_payment_instructions: input.includePaymentInstructions,
+    send_mode: input.sendMode,
+    status: 'issued',
+    issued_at: nowISO(),
+    created_at: nowISO(),
+    created_by_uid: input.createdByUid,
+    created_by_email: input.createdByEmail,
+  }).select('id').single();
+  if (!data) throw new Error('Failed to create invoice');
+  const invoiceId = data.id!;
+
   try {
-    await setDoc(doc(collection(db, LIVE_COLLECTIONS.clientNotifications)), {
-      userId: input.userId,
+    await supabase.from(LIVE_COLLECTIONS.clientNotifications).insert({
+      user_id: input.userId,
       type: 'invoice',
       title: 'New invoice',
-      body: `Invoice ${issuedNumber} for ${formatInvoiceMoney(invoiceTotal(items, Number(input.taxRate) || 0), input.currency || 'USD')} has been issued to your account.`,
-      href: `/invoice/${invoiceRef.id}`,
+      body: `Invoice ${number} for ${formatInvoiceMoney(invoiceTotal(items, Number(input.taxRate) || 0), input.currency || 'USD')} has been issued to your account.`,
+      href: `/invoice/${invoiceId}`,
       read: false,
-      createdAt: now,
+      created_at: nowISO(),
     });
   } catch (err) {
     console.error('Invoice issued but notification write failed:', err);
   }
-  return invoiceRef.id;
+  return invoiceId;
 }
 
 export async function getInvoiceById(id: string): Promise<StaffInvoice | null> {
-  const snap = await getDoc(doc(db, LIVE_COLLECTIONS.invoices, id));
-  return snap.exists() ? mapInvoice(snap.id, snap.data()) : null;
+  const { data, error } = await supabase.from(LIVE_COLLECTIONS.invoices).select('*').eq('id', id).maybeSingle();
+  if (error || !data) return null;
+  return mapInvoice(data.id!, data);
 }
 
 export async function getAllInvoices(): Promise<StaffInvoice[]> {
-  const snap = await getDocs(query(collection(db, LIVE_COLLECTIONS.invoices), orderBy('createdAt', 'desc')));
-  return snap.docs.map((d) => mapInvoice(d.id, d.data()));
+  const { data, error } = await supabase.from(LIVE_COLLECTIONS.invoices).select('*').order('created_at', { ascending: false });
+  if (error || !data) return [];
+  return data.map((d) => mapInvoice(d.id!, d));
 }
 
 export async function getInvoicesForUser(userId: string): Promise<StaffInvoice[]> {
   try {
-    const snap = await getDocs(
-      query(
-        collection(db, LIVE_COLLECTIONS.invoices),
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc'),
-      ),
-    );
-    return snap.docs.map((d) => mapInvoice(d.id, d.data()));
+    const { data, error } = await supabase
+      .from(LIVE_COLLECTIONS.invoices)
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map((d) => mapInvoice(d.id!, d));
   } catch {
-    const snap = await getDocs(
-      query(collection(db, LIVE_COLLECTIONS.invoices), where('userId', '==', userId)),
-    );
-    return snap.docs
-      .map((d) => mapInvoice(d.id, d.data()))
+    const { data } = await supabase.from(LIVE_COLLECTIONS.invoices).select('*').eq('user_id', userId);
+    return (data ?? [])
+      .map((d) => mapInvoice(d.id!, d))
       .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
   }
 }
 
 export async function markInvoiceEmailSent(id: string) {
-  await updateDoc(doc(db, LIVE_COLLECTIONS.invoices, id), {
-    emailSentAt: new Date(),
-    emailError: deleteField(),
+  await supabase.from(LIVE_COLLECTIONS.invoices).update({
+    email_sent_at: nowISO(),
+    email_error: null,
     status: 'sent',
-    updatedAt: new Date(),
-  });
+    updated_at: nowISO(),
+  }).eq('id', id);
 }
 
 export async function markInvoicePaid(id: string) {
-  await updateDoc(doc(db, LIVE_COLLECTIONS.invoices, id), {
+  await supabase.from(LIVE_COLLECTIONS.invoices).update({
     status: 'paid',
-    paidAt: new Date(),
-    updatedAt: new Date(),
-  });
+    paid_at: nowISO(),
+    updated_at: nowISO(),
+  }).eq('id', id);
 }
 
 export { PROOF_ACCEPT };
 
 export async function claimInvoicePayment(invoice: StaffInvoice): Promise<void> {
-  if (!invoice.id) throw new Error('Invoice is missing.');
+  if (!invoice.id!) throw new Error('Invoice is missing.');
   const now = new Date();
-  await updateDoc(doc(db, LIVE_COLLECTIONS.invoices, invoice.id), {
-    paymentClaimedAt: now,
+  await supabase.from(LIVE_COLLECTIONS.invoices).update({
+    payment_claimed_at: nowISO(),
     status: 'paid',
-    paidAt: now,
-    updatedAt: now,
-  });
+    paid_at: nowISO(),
+    updated_at: nowISO(),
+  }).eq('id', invoice.id!);
   try {
-    await setDoc(doc(collection(db, LIVE_COLLECTIONS.staffNotifications)), {
+    await supabase.from(LIVE_COLLECTIONS.staffNotifications).insert({
       type: 'invoice-payment',
       title: 'Invoice payment reported',
       body: `${invoice.billToName || invoice.billToEmail} reported payment for ${invoice.number}.`,
       href: '/admin/transactions',
-      invoiceId: invoice.id,
-      userId: invoice.userId,
+      invoice_id: invoice.id!,
+      user_id: invoice.userId,
       read: false,
-      createdAt: now,
+      created_at: nowISO(),
     });
   } catch (err) {
     console.error('Invoice payment claimed but finance notice failed:', err);
@@ -371,23 +353,24 @@ export async function uploadInvoicePaymentProof(
   }
   const contentType = resolveProofContentType(file);
   const safeName = file.name.replace(/[^\w.\- ]+/g, '_');
-  const path = `payment-proofs/${userId}/invoice-${invoice.id}/${Date.now()}_${safeName}`;
-  const fileRef = ref(storage, path);
-  await uploadBytes(fileRef, file, { contentType });
-  const url = await getDownloadURL(fileRef);
+  const path = `payment-proofs/${userId}/invoice-${invoice.id!}/${Date.now()}_${safeName}`;
+  const { error: upErr } = await supabase.storage.from(PROOF_BUCKET).upload(path, file, { contentType });
+  if (upErr) throw upErr;
+  const { data } = supabase.storage.from(PROOF_BUCKET).getPublicUrl(path);
+  const url = data.publicUrl;
   const proof: PaymentProof = { name: file.name, url, path, size: file.size, contentType, uploadedAt: new Date() };
-  await updateDoc(doc(db, LIVE_COLLECTIONS.invoices, invoice.id), {
-    paymentProofs: arrayUnion(proof),
-    updatedAt: new Date(),
-  });
+  await supabase.from(LIVE_COLLECTIONS.invoices).update({
+    payment_proofs: [proof],
+    updated_at: nowISO(),
+  }).eq('id', invoice.id!);
   return proof;
 }
 
 export async function voidInvoice(id: string) {
-  await updateDoc(doc(db, LIVE_COLLECTIONS.invoices, id), {
+  await supabase.from(LIVE_COLLECTIONS.invoices).update({
     status: 'void',
-    updatedAt: new Date(),
-  });
+    updated_at: nowISO(),
+  }).eq('id', id);
 }
 
 const INVOICE_MAIL_URL =
@@ -395,9 +378,9 @@ const INVOICE_MAIL_URL =
   'https://safeguard-invoice-mail.sgfintechllc.workers.dev';
 
 export async function sendInvoiceEmail(invoiceId: string): Promise<void> {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Sign in required');
-  const token = await user.getIdToken();
+  const { data: session } = await supabase.auth.getSession();
+  const token = (session as any)?.access_token;
+  if (!token) throw new Error('Sign in required');
   const res = await fetch(INVOICE_MAIL_URL, {
     method: 'POST',
     headers: {

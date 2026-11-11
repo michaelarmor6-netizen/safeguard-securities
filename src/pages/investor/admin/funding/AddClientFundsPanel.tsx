@@ -127,7 +127,7 @@ export default function AddClientFundsPanel({ preselectUserId, onCredited, onClo
         note,
       });
       logAction(
-        user.uid,
+        user.id,
         adminProfile?.email ?? '',
         'Funds added to client wallet (desk-recorded)',
         `${selected.profile.email ?? selected.profile.id}: ${fmt(result.amount)} (${result.reference}) - balance ${fmt(result.previousBalance)} to ${fmt(result.newBalance)}${note.trim() ? ` - ${note.trim()}` : ''}`,

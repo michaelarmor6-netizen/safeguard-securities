@@ -1,11 +1,10 @@
-import { signInWithCustomToken } from 'firebase/auth';
-import { auth } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 import { clerkSessionUrl } from '../../lib/clerk';
 import { ensureInvestorProfile, type InvestorProfile } from './profileService';
 
-// Clerk holds the password. Firestore rules still require a Firebase Auth
-// session, so the Worker verifies the Clerk token and returns a Firebase
-// custom token for the same email.
+// Clerk holds the password. The Worker verifies the Clerk token and returns a
+// Supabase access token for the same email, which we use to establish the
+// Supabase session.
 export async function connectClerkSession(getToken: () => Promise<string | null>): Promise<InvestorProfile> {
   const url = clerkSessionUrl();
   if (!url) {
@@ -21,18 +20,30 @@ export async function connectClerkSession(getToken: () => Promise<string | null>
     method: 'POST',
     headers: { Authorization: `Bearer ${clerkToken}` },
   });
-  const body = (await res.json().catch(() => ({}))) as { token?: unknown; error?: unknown };
-  if (!res.ok || typeof body.token !== 'string') {
+  const body = (await res.json().catch(() => ({}))) as { access_token?: string; refresh_token?: string; email?: string; error?: unknown };
+  if (!res.ok || typeof body.access_token !== 'string') {
     const message = typeof body.error === 'string' ? body.error : 'Could not open your SafeGuard session.';
     throw new Error(message);
   }
 
-  const cred = await signInWithCustomToken(auth, body.token);
-  const email = cred.user.email ?? '';
+  const { error } = await supabase.auth.setSession({
+    access_token: body.access_token,
+    refresh_token: body.refresh_token ?? '',
+  });
+  if (error) throw error;
+
+  const email = body.email ?? '';
   if (!email) {
     throw new Error('Signed in, but no email was attached to the account.');
   }
-  return ensureInvestorProfile(cred.user.uid, email);
+
+  // Get the user id from the session
+  const { data: { session } } = await supabase.auth.getSession();
+  const uid = session?.user?.id ?? '';
+  if (!uid) {
+    throw new Error('Signed in, but no user id was attached to the account.');
+  }
+  return ensureInvestorProfile(uid, email);
 }
 
 export function messageFromClerkError(error: unknown): string {

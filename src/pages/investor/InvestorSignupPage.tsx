@@ -6,11 +6,11 @@ import { useInvestorAuth } from '../../contexts/InvestorAuthContext';
 import { getFirebaseAuthErrorMessage } from '../../lib/firebaseAuthErrors';
 import { isSuperAdminEmail } from '../../lib/investorRoles';
 import ThemeToggle from '../../components/ui/ThemeToggle';
-import { auth } from '../../config/firebase';
 import { recordReferral } from '../../services/investor/referralService';
 import { isPlausibleReferralCode } from '../../lib/referralCodes';
 import { isClerkAuthEnabled } from '../../lib/clerk';
 import { ClerkSignupForm } from '../../components/auth/ClerkSignupForm';
+import { supabase } from '../../config/supabase';
 
 const bullets = [
   'Quick signup with your email and a password',
@@ -70,12 +70,16 @@ export default function InvestorSignupPage() {
 
       // Attribute the referral once the account exists, so we can prove who is
       // claiming it. Never allowed to fail the signup.
-      if (referralCode && isPlausibleReferralCode(referralCode) && auth.currentUser) {
-        await recordReferral({
-          code: referralCode,
-          referredUserId: auth.currentUser.uid,
-          referredEmail: auth.currentUser.email ?? undefined,
-        });
+      if (referralCode && isPlausibleReferralCode(referralCode)) {
+        const { data: { session } } = await supabase.auth.getSession();
+        const firebaseUser = session?.user;
+        if (firebaseUser) {
+          await recordReferral({
+            code: referralCode,
+            referredUserId: firebaseUser.id,
+            referredEmail: firebaseUser.email ?? undefined,
+          });
+        }
       }
 
       toast.success('Account created — pending review');

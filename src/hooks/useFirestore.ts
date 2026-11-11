@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { DocumentData, Unsubscribe } from 'firebase/firestore';
 import { createQuery, OptimizedQuery, handleFirebaseError } from '../utils/firebaseOptimizer';
 
 interface UseFirestoreOptions {
@@ -10,14 +9,14 @@ interface UseFirestoreOptions {
 }
 
 interface UseFirestoreState {
-  data: DocumentData[];
+  data: any[];
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
   isEmpty: boolean;
 }
 
-// Optimized Firestore hook with caching, error handling, and real-time updates
+// Optimized Supabase hook with caching, error handling, and real-time updates
 export const useFirestore = (
   collectionName: string,
   queryBuilder?: (query: OptimizedQuery) => OptimizedQuery,
@@ -30,10 +29,10 @@ export const useFirestore = (
     maxRetries = 3
   } = options;
 
-  const [data, setData] = useState<DocumentData[]>([]);
+  const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const unsubscribeRef = useRef<Unsubscribe | null>(null);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
   const retryCountRef = useRef(0);
 
   const buildQuery = (): OptimizedQuery => {
@@ -51,7 +50,7 @@ export const useFirestore = (
     try {
       const query = buildQuery();
       const result = await query.execute();
-      
+
       if (result.error) {
         setError(result.error);
         setData([]);
@@ -62,7 +61,7 @@ export const useFirestore = (
     } catch (err) {
       const errorMessage = handleFirebaseError(err, `fetch ${collectionName}`, false);
       setError(errorMessage);
-      
+
       // Retry logic
       if (retryOnError && retryCountRef.current < maxRetries) {
         retryCountRef.current++;
@@ -70,7 +69,7 @@ export const useFirestore = (
         setTimeout(() => fetchData(false), 1000 * retryCountRef.current);
         return;
       }
-      
+
       setData([]);
     } finally {
       if (showLoading) setLoading(false);
@@ -80,35 +79,35 @@ export const useFirestore = (
   const setupRealTimeListener = () => {
     try {
       const query = buildQuery();
-      
-      const unsubscribe = query.onSnapshot((newData, error) => {
-        if (error) {
-          const errorMessage = handleFirebaseError(error, `real-time ${collectionName}`, false);
+
+      const unsubscribe = query.onSnapshot((newData, err) => {
+        if (err) {
+          const errorMessage = handleFirebaseError(err, `real-time ${collectionName}`, false);
           console.error(`Real-time listener error for ${collectionName}:`, errorMessage);
-          
+
           // Check if it's an authentication error that should not trigger retries
-          if (errorMessage.includes('Authentication required') || 
-              errorMessage.includes('Access denied') || 
-              error.includes('unauthenticated') || 
-              error.includes('permission-denied')) {
+          if (errorMessage.includes('Authentication required') ||
+              errorMessage.includes('Access denied') ||
+              errorMessage.includes('unauthenticated') ||
+              errorMessage.includes('permission-denied')) {
             console.log(`Authentication/permission error in real-time listener for ${collectionName}, not retrying`);
             setError(errorMessage);
             setLoading(false);
             return;
           }
-          
+
           setError(errorMessage);
-          
+
           // Only retry for network or temporary errors
           if (retryOnError && retryCountRef.current < maxRetries) {
             retryCountRef.current++;
             console.log(`Retrying real-time listener for ${collectionName} (${retryCountRef.current}/${maxRetries})`);
-            
+
             // Clean up current listener before retrying
             if (unsubscribeRef.current) {
               unsubscribeRef.current();
             }
-            
+
             // Longer delay for retries to prevent spam
             setTimeout(setupRealTimeListener, 3000 * Math.pow(2, retryCountRef.current)); // 3s, 6s, 12s...
           } else if (retryCountRef.current >= maxRetries) {
@@ -141,10 +140,10 @@ export const useFirestore = (
       unsubscribeRef.current();
       unsubscribeRef.current = null;
     }
-    
+
     // Reset retry count on new effect
     retryCountRef.current = 0;
-    
+
     if (realTime) {
       setupRealTimeListener();
     } else {
@@ -184,19 +183,19 @@ export const useUserAccounts = (userId: string) => {
 
   console.log('useUserAccounts: Setting up for userId:', userId);
   console.log('useUserAccounts: Auth state and userId verified');
-  
+
   const result = useFirestore(
     'accounts',
     (query) => {
       console.log('useUserAccounts: Building query for userId:', userId);
       return query
-        .whereField('userId', '==', userId);
-        // Temporarily remove orderByField to avoid index requirement
-        // .orderByField('createdAt', 'desc');
+        .whereField('user_id', '==', userId);
+      // Temporarily remove orderByField to avoid index requirement
+      // .orderByField('created_at', 'desc');
     },
     { realTime: true, cacheEnabled: false, maxRetries: 3, retryOnError: true } // Disable cache temporarily for debugging
   );
-  
+
   // Enhanced logging for debugging
   console.log('useUserAccounts: Query result:', {
     dataCount: result.data?.length || 0,
@@ -204,7 +203,7 @@ export const useUserAccounts = (userId: string) => {
     error: result.error,
     userId: userId
   });
-  
+
   return result;
 };
 
@@ -213,7 +212,7 @@ export const useUsers = (includeInactive: boolean = false) => {
   return useFirestore(
     'users',
     (query) => {
-      let q = query.orderByField('createdAt', 'desc');
+      let q = query.orderByField('created_at', 'desc');
       if (!includeInactive) {
         q = q.whereField('status', '!=', 'inactive');
       }
@@ -239,7 +238,7 @@ export const useFAQs = (activeOnly: boolean = true) => {
     (query) => {
       let q = query.orderByField('order', 'asc');
       if (activeOnly) {
-        q = q.whereField('isActive', '==', true);
+        q = q.whereField('is_active', '==', true);
       }
       return q;
     },
@@ -248,17 +247,17 @@ export const useFAQs = (activeOnly: boolean = true) => {
 };
 
 // Hook for system configuration
-export const useSystemConfig = () => {
-  const [config, setConfig] = useState<DocumentData | null>(null);
+export const useSystemConfigHook = () => {
+  const [config, setConfig] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchConfig = async () => {
       try {
-        const query = createQuery('systemConfig');
+        const query = createQuery('system_config');
         const result = await query.execute();
-        
+
         if (result.error) {
           setError(result.error);
         } else if (result.data.length > 0) {

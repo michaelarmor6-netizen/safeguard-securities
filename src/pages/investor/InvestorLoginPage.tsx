@@ -14,7 +14,7 @@ import { useInvestorAuth } from '../../contexts/InvestorAuthContext';
 import { getFirebaseAuthErrorMessage } from '../../lib/firebaseAuthErrors';
 import { isInvestorAdmin } from '../../lib/investorRoles';
 import { ensureInvestorProfile } from '../../services/investor/profileService';
-import { auth } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 import ThemeToggle from '../../components/ui/ThemeToggle';
 import { isClerkAuthEnabled } from '../../lib/clerk';
 import { ClerkLoginForm } from '../../components/auth/ClerkLoginForm';
@@ -79,9 +79,10 @@ export default function InvestorLoginPage() {
     setBusy(true);
     try {
       await signIn(email, password);
-      const firebaseUser = auth.currentUser;
+      const { data: { session } } = await supabase.auth.getSession();
+      const firebaseUser = session?.user;
       if (firebaseUser) {
-        const profile = await ensureInvestorProfile(firebaseUser.uid, firebaseUser.email ?? email);
+        const profile = await ensureInvestorProfile(firebaseUser.id, firebaseUser.email ?? email);
         if (isInvestorAdmin(profile.role)) {
           await signOut();
           toast.error('Staff must sign in at the admin login.');

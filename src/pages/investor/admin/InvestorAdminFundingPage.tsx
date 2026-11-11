@@ -151,7 +151,7 @@ export default function InvestorAdminFundingPage() {
                         disabled={busyId === f.id}
                         onClick={() => run(f.id, async () => {
                           await approveFundingRequest(f);
-                          if (user) logAction(user.uid, adminProfile?.email ?? '', 'Funding approved - details sent', `${f.userEmail ?? f.userId}: ${fmt(f.amount)} (${requestReference(f)})`);
+                          if (user) logAction(user.id, adminProfile?.email ?? '', 'Funding approved - details sent', `${f.userEmail ?? f.userId}: ${fmt(f.amount)} (${requestReference(f)})`);
                           toast.success('Approved - funding details sent to client');
                         })}
                       >
@@ -163,7 +163,7 @@ export default function InvestorAdminFundingPage() {
                         disabled={busyId === f.id}
                         onClick={() => run(f.id, async () => {
                           await updateFundingRequest(f.id, 'rejected');
-                          if (user) logAction(user.uid, adminProfile?.email ?? '', 'Funding rejected', `${f.userEmail ?? f.userId}: ${fmt(f.amount)}`);
+                          if (user) logAction(user.id, adminProfile?.email ?? '', 'Funding rejected', `${f.userEmail ?? f.userId}: ${fmt(f.amount)}`);
                           toast.success('Rejected');
                         })}
                       >
@@ -187,7 +187,7 @@ export default function InvestorAdminFundingPage() {
                           disabled={busyId === f.id}
                           onClick={() => run(f.id, async () => {
                             await markFundingEmailSent(f.id);
-                            if (user) logAction(user.uid, adminProfile?.email ?? '', 'Funding details emailed manually', `${f.userEmail ?? f.userId}: ${requestReference(f)}`);
+                            if (user) logAction(user.id, adminProfile?.email ?? '', 'Funding details emailed manually', `${f.userEmail ?? f.userId}: ${requestReference(f)}`);
                             toast.success('Marked as emailed');
                           })}
                         >
@@ -200,7 +200,7 @@ export default function InvestorAdminFundingPage() {
                         disabled={busyId === f.id}
                         onClick={() => run(f.id, async () => {
                           const newBalance = await confirmFundingReceived(f);
-                          if (user) logAction(user.uid, adminProfile?.email ?? '', 'Funding receipt confirmed - wallet credited', `${f.userEmail ?? f.userId}: ${fmt(f.amount)} (${requestReference(f)}) - new balance ${fmt(newBalance)}`);
+                          if (user) logAction(user.id, adminProfile?.email ?? '', 'Funding receipt confirmed - wallet credited', `${f.userEmail ?? f.userId}: ${fmt(f.amount)} (${requestReference(f)}) - new balance ${fmt(newBalance)}`);
                           toast.success(`Receipt confirmed - wallet credited, new balance ${fmt(newBalance)}`);
                         })}
                       >

@@ -1,16 +1,15 @@
 // Import pipeline: file -> rows -> mapped -> reviewed -> committed.
 // Parsing happens entirely in the browser on purpose: no lead PII leaves the
-// admin's machine before a human has looked at the review grid, and there is
-// no server to deploy for phase 1. Originals are archived to Storage for the
-// audit trail - best-effort, because an archive failure should not block an
-// import the admin has already reviewed.
-import { addDoc, collection, getDocs, orderBy, query, type DocumentData } from 'firebase/firestore';
-import { ref, uploadBytes } from 'firebase/storage';
-import { db, storage } from '../../../config/firebase';
+// admin's machine before a human has looked at the review grid. Originals are
+// archived to Storage for the audit trail - best-effort, because an archive
+// failure should not block an import the admin has already reviewed.
+import { supabase } from '../../../config/supabase';
 import { LIVE_COLLECTIONS } from '../../../config/liveCollections';
 import { guessField, normalizeEmail, normalizePhone, splitFullName } from './leadNormalizer';
 import { extractFromText } from './crmTextExtract';
 import type { ConsentBasis, CrmField, CrmImportBatch, ReviewRow } from './crmTypes';
+
+const CRM_IMPORT_BUCKET = 'crm-imports';
 
 export interface ParsedFile {
   name: string;
@@ -158,36 +157,45 @@ export function buildReviewRows(
 
 // --------------------------------------------------------------- batches ---
 
-function mapBatch(id: string, data: DocumentData): CrmImportBatch {
+function mapBatch(id: string, data: any): CrmImportBatch {
   return {
     id,
     files: data.files ?? [],
     mapping: data.mapping ?? {},
-    consentBasis: data.consentBasis ?? 'unknown',
+    consentBasis: data.consent_basis ?? data.consentBasis ?? 'unknown',
     counts: data.counts ?? { parsed: 0, kept: 0, rejected: 0, deduped: 0, suppressed: 0 },
-    confirmedBy: data.confirmedBy ?? '',
-    confirmedByEmail: data.confirmedByEmail ?? '',
-    createdAt: data.createdAt?.toDate?.(),
+    confirmedBy: data.confirmed_by ?? data.confirmedBy ?? '',
+    confirmedByEmail: data.confirmed_by_email ?? data.confirmedByEmail ?? '',
+    createdAt: data.created_at ? new Date(data.created_at) : undefined,
   };
 }
 
 export async function listImportBatches(): Promise<CrmImportBatch[]> {
-  const snap = await getDocs(query(collection(db, LIVE_COLLECTIONS.crmImports), orderBy('createdAt', 'desc')));
-  return snap.docs.map((d) => mapBatch(d.id, d.data()));
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.crmImports)
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error || !data) return [];
+  return data.map((d) => mapBatch(d.id!, d));
 }
 
 export async function recordImportBatch(
   batch: Omit<CrmImportBatch, 'id' | 'createdAt'>,
   originals: File[],
 ): Promise<string> {
-  const docRef = await addDoc(collection(db, LIVE_COLLECTIONS.crmImports), { ...batch, createdAt: new Date() });
+  const { data } = await supabase.from(LIVE_COLLECTIONS.crmImports).insert({
+    ...batch,
+    created_at: new Date().toISOString(),
+  }).select('id').single();
+  if (!data) throw new Error('Failed to create import batch');
+  const docRefId = data.id!;
   // Archive originals - best-effort, never blocking.
   await Promise.all(originals.map(async (f) => {
     try {
-      await uploadBytes(ref(storage, `crm-imports/${docRef.id}/${f.name}`), f);
+      await supabase.storage.from(CRM_IMPORT_BUCKET).upload(`crm-imports/${docRefId}/${f.name}`, f);
     } catch (e) {
       console.error('crm import archive failed (continuing):', e);
     }
   }));
-  return docRef.id;
+  return docRefId;
 }

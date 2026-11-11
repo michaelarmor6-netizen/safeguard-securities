@@ -102,11 +102,11 @@ export default function InvestorDashboardPage() {
     let cancelled = false;
     const load = (initial: boolean) => {
       Promise.all([
-        getUserPortfolio(user.uid),
-        getPortfolioStatsForUser(user.uid),
-        getUserWallet(user.uid),
-        getPortfolioHistory(user.uid),
-        getInvoicesForUser(user.uid).catch(() => [] as StaffInvoice[]),
+        getUserPortfolio(user.id),
+        getPortfolioStatsForUser(user.id),
+        getUserWallet(user.id),
+        getPortfolioHistory(user.id),
+        getInvoicesForUser(user.id).catch(() => [] as StaffInvoice[]),
       ])
         .then(([h, s, w, hist, inv]) => {
           if (cancelled) return;

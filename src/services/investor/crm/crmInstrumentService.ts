@@ -1,8 +1,4 @@
-import {
-  collection, doc, getDoc, getDocs, serverTimestamp, setDoc, updateDoc,
-  type DocumentData,
-} from 'firebase/firestore';
-import { db } from '../../../config/firebase';
+import { supabase, nowISO } from '../../../config/supabase';
 import { LIVE_COLLECTIONS } from '../../../config/liveCollections';
 import { buildTrack } from './crmFunnelTemplates';
 import type {
@@ -124,33 +120,34 @@ export const BUILTIN_INSTRUMENTS: Omit<CrmInstrument, 'createdAt' | 'updatedAt'>
   },
 ];
 
-function mapInstrument(id: string, d: DocumentData): CrmInstrument {
+function mapInstrument(id: string, d: any): CrmInstrument {
   const slug = String(d.slug ?? id);
   return {
     id,
     slug,
     name: d.name ?? slug,
-    assetClass: (d.assetClass ?? 'other') as InstrumentAssetClass,
+    assetClass: (d.asset_class ?? d.assetClass ?? 'other') as InstrumentAssetClass,
     status: (d.status ?? 'active') as InstrumentStatus,
     landing: d.landing ?? landingGold(),
-    riskDisclosure: String(d.riskDisclosure ?? GOLD_DISCLOSURE),
-    defaultAppointmentUrl: d.defaultAppointmentUrl ?? DEFAULT_APPT,
-    defaultDemoUrl: d.defaultDemoUrl ?? DEFAULT_DEMO,
-    defaultSteps: Array.isArray(d.defaultSteps) ? d.defaultSteps as CampaignStep[] : buildTrack(slug),
-    createdAt: d.createdAt?.toDate?.(),
-    updatedAt: d.updatedAt?.toDate?.(),
+    riskDisclosure: String(d.risk_disclosure ?? d.riskDisclosure ?? GOLD_DISCLOSURE),
+    defaultAppointmentUrl: d.default_appointment_url ?? d.defaultAppointmentUrl ?? DEFAULT_APPT,
+    defaultDemoUrl: d.default_demo_url ?? d.defaultDemoUrl ?? DEFAULT_DEMO,
+    defaultSteps: Array.isArray(d.default_steps) ? d.default_steps as CampaignStep[] : buildTrack(slug),
+    createdAt: d.created_at ? new Date(d.created_at) : undefined,
+    updatedAt: d.updated_at ? new Date(d.updated_at) : undefined,
   };
 }
 
 export async function listInstruments(): Promise<CrmInstrument[]> {
-  const snap = await getDocs(collection(db, LIVE_COLLECTIONS.crmInstruments));
-  return snap.docs.map((d) => mapInstrument(d.id, d.data()))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const { data, error } = await supabase.from(LIVE_COLLECTIONS.crmInstruments).select('*');
+  if (error || !data) return [];
+  return data.map((d) => mapInstrument(d.id, d)).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function getInstrument(slug: string): Promise<CrmInstrument | null> {
-  const snap = await getDoc(doc(db, LIVE_COLLECTIONS.crmInstruments, slug));
-  return snap.exists() ? mapInstrument(snap.id, snap.data()) : null;
+  const { data, error } = await supabase.from(LIVE_COLLECTIONS.crmInstruments).select('*').eq('slug', slug).maybeSingle();
+  if (error || !data) return null;
+  return mapInstrument(data.id, data);
 }
 
 export async function ensureBuiltinInstruments(): Promise<CrmInstrument[]> {
@@ -158,10 +155,10 @@ export async function ensureBuiltinInstruments(): Promise<CrmInstrument[]> {
   const have = new Set(existing.map((i) => i.slug));
   for (const seed of BUILTIN_INSTRUMENTS) {
     if (have.has(seed.slug)) continue;
-    await setDoc(doc(db, LIVE_COLLECTIONS.crmInstruments, seed.slug), {
+    await supabase.from(LIVE_COLLECTIONS.crmInstruments).upsert({
       ...seed,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+      created_at: nowISO(),
+      updated_at: nowISO(),
     });
   }
   return listInstruments();
@@ -181,25 +178,24 @@ export async function upsertInstrument(input: {
   const slug = input.slug.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, '');
   if (!slug) throw new Error('Instrument slug is required');
   if (!input.riskDisclosure.trim()) throw new Error('Risk disclosure cannot be empty');
-  const ref = doc(db, LIVE_COLLECTIONS.crmInstruments, slug);
-  const prior = await getDoc(ref);
+  const { data: prior } = await supabase.from(LIVE_COLLECTIONS.crmInstruments).select('*').eq('slug', slug).maybeSingle();
   const steps = input.defaultSteps?.length
     ? input.defaultSteps
-    : (prior.exists() ? (prior.data()?.defaultSteps as CampaignStep[] | undefined) : undefined)
+    : (prior ? (prior.default_steps as CampaignStep[] | undefined) : undefined)
       ?? buildTrack(slug);
-  await setDoc(ref, {
+  await supabase.from(LIVE_COLLECTIONS.crmInstruments).upsert({
     slug,
     name: input.name.trim(),
-    assetClass: input.assetClass,
+    asset_class: input.assetClass,
     status: input.status ?? 'active',
     landing: input.landing,
-    riskDisclosure: input.riskDisclosure.trim(),
-    defaultAppointmentUrl: input.defaultAppointmentUrl.trim(),
-    defaultDemoUrl: input.defaultDemoUrl.trim(),
-    defaultSteps: steps,
-    createdAt: prior.exists() ? prior.data()?.createdAt ?? serverTimestamp() : serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  }, { merge: true });
+    risk_disclosure: input.riskDisclosure.trim(),
+    default_appointment_url: input.defaultAppointmentUrl.trim(),
+    default_demo_url: input.defaultDemoUrl.trim(),
+    default_steps: steps,
+    created_at: prior ? (prior.created_at ?? nowISO()) : nowISO(),
+    updated_at: nowISO(),
+  });
   return slug;
 }
 
@@ -210,7 +206,7 @@ export async function updateInstrument(
   if (patch.riskDisclosure !== undefined && !patch.riskDisclosure.trim()) {
     throw new Error('Risk disclosure cannot be empty');
   }
-  await updateDoc(doc(db, LIVE_COLLECTIONS.crmInstruments, slug), { ...patch, updatedAt: serverTimestamp() });
+  await supabase.from(LIVE_COLLECTIONS.crmInstruments).update({ ...patch, updated_at: nowISO() }).eq('slug', slug);
 }
 
 export function blankLanding(): InstrumentLanding {
@@ -235,5 +231,5 @@ export function landingUrl(slug: string): string {
   if (slug === 'gold-options') return 'https://app.safeguardsecurities.us/campaign/gold-options.html';
   if (slug === 'gold') return 'https://app.safeguardsecurities.us/campaign/gold.html';
   if (slug === 'preipo') return 'https://safeguardsecurities.us/campaign/preipo.html';
-  return `https://us-central1-e-bank-dashboard.cloudfunctions.net/campaignLanding?slug=${encodeURIComponent(slug)}`;
+  return `https://safeguardsecurities.us/campaign/landing?slug=${encodeURIComponent(slug)}`;
 }

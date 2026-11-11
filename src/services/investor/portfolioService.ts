@@ -1,5 +1,4 @@
-import { collection, doc, getDoc, getDocs, query, updateDoc, where, type DocumentData } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase, nowISO } from '../../config/supabase';
 import { LIVE_COLLECTIONS } from '../../config/liveCollections';
 import { getAllFundingRequests, getPendingFundingRequests } from './fundingService';
 import { getAllAssets, type AssetClass } from './assetCatalogService';
@@ -68,7 +67,7 @@ export interface PortfolioStats {
 /** Open screens re-read marks on this interval. The hourly job writes them. */
 export const PORTFOLIO_MARK_REFRESH_MS = 30 * 60 * 1000;
 
-function mapRawHolding(id: string, data: DocumentData): Omit<PortfolioHolding, 'price' | 'change' | 'changePercent' | 'value' | 'allocation'> {
+function mapRawHolding(id: string, data: any): Omit<PortfolioHolding, 'price' | 'change' | 'changePercent' | 'value' | 'allocation'> {
   const shares = Number(data.shares ?? data.quantity ?? 0);
   return {
     id,
@@ -76,8 +75,6 @@ function mapRawHolding(id: string, data: DocumentData): Omit<PortfolioHolding, '
     symbol: data.symbol ?? '',
     name: data.name ?? data.symbol ?? '',
     shares,
-    // fillOrder writes `avgCost`; older/admin-seeded rows may use
-    // averagePrice/avgPrice. Reading only the latter silently showed $0.00.
     averagePrice: Number(data.avgCost ?? data.averagePrice ?? data.avgPrice ?? 0),
     currentPrice: Number(data.currentPrice ?? data.price ?? 0),
     sector: data.sector,
@@ -94,11 +91,11 @@ function mapRawHolding(id: string, data: DocumentData): Omit<PortfolioHolding, '
 /** Desk-posted unrealized P/L. Replaces the live quote and settlement feeds. */
 export async function setHoldingManualPnl(holdingId: string, pnl: number) {
   if (!Number.isFinite(pnl)) throw new Error('Enter a P/L amount.');
-  await updateDoc(doc(db, LIVE_COLLECTIONS.portfolioHoldings, holdingId), {
-    manualPnl: pnl,
-    manualPnlAsOf: new Date().toISOString().slice(0, 10),
-    updatedAt: new Date(),
-  });
+  await supabase.from(LIVE_COLLECTIONS.portfolioHoldings).update({
+    manual_pnl: pnl,
+    manual_pnl_as_of: new Date().toISOString().slice(0, 10),
+    updated_at: nowISO(),
+  }).eq('id', holdingId);
 }
 
 interface OpeningTerms {
@@ -110,18 +107,21 @@ interface OpeningTerms {
 // order. Without both, P/L cannot be measured from the strike and the book
 // stays at the premium while the underlying moves.
 async function loadOpeningTerms(userId: string): Promise<Map<string, OpeningTerms>> {
-  const snap = await getDocs(query(collection(db, LIVE_COLLECTIONS.orders), where('userId', '==', userId)));
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.orders)
+    .select('*')
+    .eq('user_id', userId);
+  if (error || !data) return new Map();
   const best = new Map<string, { strike?: number; strikeAt: number; optionType?: 'call' | 'put'; typeAt: number }>();
-  for (const d of snap.docs) {
-    const data = d.data();
-    const status = String(data.status ?? '');
+  for (const d of data) {
+    const status = String(d.status ?? '');
     if (status !== 'filled' && status !== 'partially_filled') continue;
-    const symbol = String(data.symbol ?? '').trim().toUpperCase();
+    const symbol = String(d.symbol ?? '').trim().toUpperCase();
     if (!symbol) continue;
-    const strike = Number(data.strikePrice ?? 0);
-    const optionType = isOptionSide(data.optionType) ? data.optionType : undefined;
+    const strike = Number(d.strikePrice ?? 0);
+    const optionType = isOptionSide(d.optionType) ? d.optionType : undefined;
     if (!(strike > 0) && !optionType) continue;
-    const at = typeof data.createdAt?.toMillis === 'function' ? data.createdAt.toMillis() : Number.MAX_SAFE_INTEGER;
+    const at = d.createdAt ? new Date(d.createdAt).getTime() : Number.MAX_SAFE_INTEGER;
     const prev = best.get(symbol) ?? { strikeAt: Number.POSITIVE_INFINITY, typeAt: Number.POSITIVE_INFINITY };
     if (strike > 0 && at < prev.strikeAt) {
       prev.strike = strike;
@@ -150,17 +150,15 @@ export interface RawHolding {
 // (no per-holding live quote calls) - used for risk/exposure summaries where
 // a real-time price isn't needed.
 export async function getAllHoldingsRaw(): Promise<RawHolding[]> {
-  const snap = await getDocs(collection(db, LIVE_COLLECTIONS.portfolioHoldings));
-  return snap.docs.map((d) => {
-    const data = d.data();
-    return {
-      id: d.id,
-      userId: data.userId ?? '',
-      symbol: data.symbol ?? '',
-      shares: Number(data.shares ?? data.quantity ?? 0),
-      currentPrice: Number(data.currentPrice ?? data.price ?? 0),
-    };
-  });
+  const { data, error } = await supabase.from(LIVE_COLLECTIONS.portfolioHoldings).select('*');
+  if (error || !data) return [];
+  return data.map((d) => ({
+    id: d.id,
+    userId: d.userId ?? '',
+    symbol: d.symbol ?? '',
+    shares: Number(d.shares ?? d.quantity ?? 0),
+    currentPrice: Number(d.currentPrice ?? d.price ?? 0),
+  }));
 }
 
 interface UnderlyingMark {
@@ -198,16 +196,19 @@ async function fetchUnderlyingMarks(tickers: string[]): Promise<Map<string, Unde
   await Promise.all(
     unique.map(async (ticker) => {
       try {
-        const snap = await getDoc(doc(db, 'marketPrices', marketPriceDocId(ticker)));
-        const data = snap.data();
+        const { data } = await supabase
+          .from('market_prices')
+          .select('*')
+          .eq('id', marketPriceDocId(ticker))
+          .maybeSingle();
         const price = Number(data?.price);
         const previousPrice = Number(data?.previousPrice);
-        if (snap.exists() && Number.isFinite(price) && price > 0) {
+        if (data && Number.isFinite(price) && price > 0) {
           marks.set(ticker, {
             price,
-            asOf: typeof data?.asOf === 'string' ? data.asOf : undefined,
+            asOf: typeof data.asOf === 'string' ? data.asOf : undefined,
             previousPrice: Number.isFinite(previousPrice) && previousPrice > 0 ? previousPrice : undefined,
-            previousAsOf: typeof data?.previousAsOf === 'string' ? data.previousAsOf : undefined,
+            previousAsOf: typeof data.previousAsOf === 'string' ? data.previousAsOf : undefined,
           });
         }
       } catch {
@@ -219,12 +220,13 @@ async function fetchUnderlyingMarks(tickers: string[]): Promise<Map<string, Unde
 }
 
 export async function getUserPortfolio(userId: string): Promise<PortfolioHolding[]> {
-  const snap = await getDocs(
-    query(collection(db, LIVE_COLLECTIONS.portfolioHoldings), where('userId', '==', userId)),
-  );
-  if (snap.empty) return [];
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.portfolioHoldings)
+    .select('*')
+    .eq('user_id', userId);
+  if (error || !data || data.length === 0) return [];
 
-  const rows = snap.docs.map((d) => mapRawHolding(d.id, d.data()));
+  const rows = data.map((d) => mapRawHolding(d.id, d));
 
   // One catalog read for the whole portfolio: gives each holding its real
   // instrument name and asset class, so a gold future stops displaying as
@@ -271,15 +273,8 @@ export async function getUserPortfolio(userId: string): Promise<PortfolioHolding
 export async function getPortfolioStatsForUser(userId: string): Promise<PortfolioStats> {
   const holdings = await getUserPortfolio(userId);
 
-  // Derive cost basis from the enriched holdings rather than re-reading the
-  // raw documents. The old version parsed the cost field itself and missed
-  // `avgCost` (what fillOrder writes), so cost basis came out as 0 and the
-  // whole position value was reported as profit.
   const costBasis = holdings.reduce((sum, h) => sum + h.shares * h.averagePrice, 0);
 
-  // Sum each holding on its own. Using only the option payoff whenever ANY
-  // position had one dropped every other holding's mark-to-market, so the
-  // headline P/L stayed put while those prices moved.
   const totalGain = holdings.reduce(
     (sum, h) => sum + unrealizedGain({ optionPnl: h.optionPnl, value: h.value, quantity: h.shares, averagePrice: h.averagePrice }),
     0,
@@ -287,9 +282,6 @@ export async function getPortfolioStatsForUser(userId: string): Promise<Portfoli
 
   const totalValue = holdings.reduce((sum, h) => sum + h.value, 0);
   const totalGainPercent = costBasis > 0 ? (totalGain / costBasis) * 100 : 0;
-  // Day move is the session change in value (prior settlement → current), not
-  // the equity-quote change. Derivative contracts have no such quote, so the
-  // old `change * shares` path reported $0 on every day the book actually moved.
   const dayChange = holdings.reduce((sum, h) => sum + (h.dayPnl ?? 0), 0);
   const dayChangePercent = totalValue > 0 ? (dayChange / totalValue) * 100 : 0;
 

@@ -23,8 +23,7 @@ import {
 import LogoDisplay from '../ui/LogoDisplay';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSystemConfigContext } from '../../contexts/SystemConfigContext';
-import { signOut } from 'firebase/auth';
-import { auth } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 import toast from 'react-hot-toast';
 
 // Sidebar navigation items
@@ -125,7 +124,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title, subt
     try {
       // Clear any cached data and sign out
       localStorage.clear(); // Clear any cached client data
-      await signOut(auth);
+      await supabase.auth.signOut();
       toast.success('Signed out successfully');
       
       // Redirect to client login page

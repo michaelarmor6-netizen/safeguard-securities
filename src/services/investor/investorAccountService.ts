@@ -1,5 +1,4 @@
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 import type {
   InvestorAccountManager,
   InvestorAddress,
@@ -32,26 +31,18 @@ export interface CreateInvestorAccountResult {
   temporaryPassword: string;
 }
 
-const createInvestorAccountFn = httpsCallable<CreateInvestorAccountPayload, CreateInvestorAccountResult>(
-  functions,
-  'createInvestorAccount',
-);
-
 export async function createInvestorAccount(
   payload: CreateInvestorAccountPayload,
 ): Promise<CreateInvestorAccountResult> {
-  const res = await createInvestorAccountFn(payload);
-  return res.data;
+  const { data, error } = await supabase.rpc('create_investor_account', payload);
+  if (error) throw error;
+  return data;
 }
 
-const checkEmailAvailableFn = httpsCallable<{ email: string }, { available: boolean }>(
-  functions,
-  'checkEmailAvailable',
-);
-
 export async function checkEmailAvailable(email: string): Promise<boolean> {
-  const res = await checkEmailAvailableFn({ email });
-  return res.data.available;
+  const { data, error } = await supabase.rpc('check_email_available', { email });
+  if (error) throw error;
+  return data.available;
 }
 
 // ---- staff accounts ----
@@ -77,14 +68,10 @@ export interface CreateStaffAccountResult {
   role: CreatableStaffRole;
 }
 
-const createStaffAccountFn = httpsCallable<CreateStaffAccountPayload, CreateStaffAccountResult>(
-  functions,
-  'createStaffAccount',
-);
-
 export async function createStaffAccount(
   payload: CreateStaffAccountPayload,
 ): Promise<CreateStaffAccountResult> {
-  const res = await createStaffAccountFn(payload);
-  return res.data;
+  const { data, error } = await supabase.rpc('create_staff_account', payload);
+  if (error) throw error;
+  return data;
 }

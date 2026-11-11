@@ -1,5 +1,4 @@
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { supabase, nowISO } from '../config/supabase';
 import { UserRole } from '../types';
 
 // This is a development utility to create admin users
@@ -7,11 +6,11 @@ import { UserRole } from '../types';
 
 export const createAdminUser = async (userId: string, role: UserRole = UserRole.ADMIN) => {
   try {
-    const userRef = doc(db, 'users', userId);
-    await updateDoc(userRef, {
+    const { error } = await supabase.from('users').update({
       role: role,
-      updatedAt: new Date()
-    });
+      updated_at: nowISO()
+    }).eq('id', userId);
+    if (error) throw error;
     const roleLabel = role === UserRole.SUPER_ADMIN ? 'super admin' : 'admin';
     console.log(`User ${userId} has been granted ${roleLabel} privileges`);
     return true;

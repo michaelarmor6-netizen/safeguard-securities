@@ -38,7 +38,7 @@ export default function InvestorAlertsPage() {
   const load = () => {
     if (!user) return;
     setLoading(true);
-    Promise.all([getAlertsForUser(user.uid), getAllAssets()])
+    Promise.all([getAlertsForUser(user.id), getAllAssets()])
       .then(([a, ax]) => {
         setAlerts(a);
         setAssets(ax);
@@ -81,7 +81,7 @@ export default function InvestorAlertsPage() {
     setSaving(true);
     try {
       await createPriceAlert({
-        userId: user.uid,
+        userId: user.id,
         assetId: selectedAsset.id,
         symbol: selectedAsset.symbol,
         condition,

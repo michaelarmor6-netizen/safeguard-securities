@@ -313,7 +313,7 @@ export default function StaffInvoicePage() {
             invoice={invoice}
             details={details}
             userId={invoice.userId}
-            canAct={user.uid === invoice.userId}
+            canAct={user.id === invoice.userId}
             onChanged={setInvoice}
           />
         </div>

@@ -275,7 +275,7 @@ export default function InvestorWorkspaceLayout() {
   useEffect(() => {
     if (!user) return;
     const refreshUnseen = () => {
-      getAlertsForUser(user.uid)
+      getAlertsForUser(user.id)
         .then((alerts) => setUnseenAlerts(alerts.filter((a) => a.status === 'triggered' && !a.seen).length))
         .catch(() => {});
     };

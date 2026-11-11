@@ -237,7 +237,7 @@ export default function InvestorAdminLayout() {
           className="border-b px-4 sm:px-6 py-2 text-[11px] sm:text-xs truncate"
           style={{ borderColor: 'var(--sg-border)', background: 'var(--sg-bg-elevated)', color: 'var(--sg-muted-2)' }}
         >
-          Local rebuild · Firebase project: {import.meta.env.VITE_FIREBASE_PROJECT_ID}
+          Local rebuild · Supabase project: {import.meta.env.VITE_SUPABASE_URL}
         </div>
         <div className="p-4 sm:p-6 relative z-10">
           <Outlet />

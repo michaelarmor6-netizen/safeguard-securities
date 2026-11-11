@@ -1,8 +1,8 @@
-import { addDoc, collection, doc, getDocs, orderBy, query, serverTimestamp, updateDoc, where, type DocumentData } from 'firebase/firestore';
-import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { db, storage } from '../../config/firebase';
+import { supabase, nowISO } from '../../config/supabase';
 import { LIVE_COLLECTIONS } from '../../config/liveCollections';
 import { isKycDocType, resolveKycUpload, type KycDocStatus, type KycDocType } from '../../lib/kycDocuments';
+
+const KYC_BUCKET = 'kyc-documents';
 
 export interface KycSubmission {
   id: string;
@@ -20,86 +20,86 @@ export interface KycSubmission {
   createdAt?: Date;
 }
 
-function mapSubmission(id: string, data: DocumentData): KycSubmission {
+function mapSubmission(id: string, data: any): KycSubmission {
   return {
     id,
-    userId: data.userId ?? '',
-    userEmail: data.userEmail,
-    fullName: data.fullName ?? '',
-    dateOfBirth: data.dateOfBirth ?? '',
+    userId: data.user_id ?? data.userId ?? '',
+    userEmail: data.user_email ?? data.userEmail,
+    fullName: data.full_name ?? data.fullName ?? '',
+    dateOfBirth: data.date_of_birth ?? data.dateOfBirth ?? '',
     address: data.address ?? '',
     phone: data.phone ?? '',
-    idType: data.idType ?? '',
-    idNumber: data.idNumber ?? '',
-    idDocumentUrl: data.idDocumentUrl,
+    idType: data.id_type ?? data.idType ?? '',
+    idNumber: data.id_number ?? data.idNumber ?? '',
+    idDocumentUrl: data.id_document_url ?? data.idDocumentUrl,
     status: data.status ?? 'pending',
-    reviewNote: data.reviewNote,
-    createdAt: data.createdAt?.toDate?.(),
+    reviewNote: data.review_note ?? data.reviewNote,
+    createdAt: data.created_at ? new Date(data.created_at) : undefined,
   };
 }
 
 // Some browsers/OSes (notably photos exported via WhatsApp on Android) hand
-// File objects with an empty or generic `.type`. storage.rules requires a
-// real image/* or application/pdf contentType on the upload, so a blank
-// File.type gets silently rejected with a 403 - determine it from the file
+// File objects with an empty or generic `.type`. Determine it from the file
 // extension instead of trusting the browser-reported MIME type.
 function resolveContentType(file: File): string {
   if (file.type && file.type !== 'application/octet-stream') return file.type;
   const ext = file.name.split('.').pop()?.toLowerCase();
   switch (ext) {
     case 'jpg':
-    case 'jpeg':
-      return 'image/jpeg';
-    case 'png':
-      return 'image/png';
-    case 'heic':
-      return 'image/heic';
-    case 'webp':
-      return 'image/webp';
-    case 'pdf':
-      return 'application/pdf';
-    default:
-      return file.type || 'application/octet-stream';
+    case 'jpeg': return 'image/jpeg';
+    case 'png': return 'image/png';
+    case 'heic': return 'image/heic';
+    case 'webp': return 'image/webp';
+    case 'pdf': return 'application/pdf';
+    default: return file.type || 'application/octet-stream';
   }
 }
 
 export async function uploadKycDocument(userId: string, file: File): Promise<string> {
   const path = `kyc/${userId}/${Date.now()}_${file.name}`;
-  const fileRef = ref(storage, path);
-  await uploadBytes(fileRef, file, { contentType: resolveContentType(file) });
-  return getDownloadURL(fileRef);
+  const { error: upErr } = await supabase.storage.from(KYC_BUCKET).upload(path, file, { contentType: resolveContentType(file) });
+  if (upErr) throw upErr;
+  const { data } = supabase.storage.from(KYC_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
 }
 
 export async function submitKyc(input: Omit<KycSubmission, 'id' | 'status' | 'createdAt'>) {
-  // The ID file is optional. Firestore rejects undefined, so leave idDocumentUrl
-  // off the document when the client did not upload one.
+  // The ID file is optional. Leave idDocumentUrl off the document when the
+  // client did not upload one.
   const { idDocumentUrl, ...rest } = input;
-  return addDoc(collection(db, LIVE_COLLECTIONS.kycSubmissions), {
+  return supabase.from(LIVE_COLLECTIONS.kycSubmissions).insert({
     ...rest,
-    ...(idDocumentUrl ? { idDocumentUrl } : {}),
+    ...(idDocumentUrl ? { id_document_url: idDocumentUrl } : {}),
     status: 'pending',
-    createdAt: new Date(),
+    created_at: nowISO(),
   });
 }
 
 export async function getKycSubmissionsForUser(userId: string): Promise<KycSubmission[]> {
-  const snap = await getDocs(
-    query(collection(db, LIVE_COLLECTIONS.kycSubmissions), where('userId', '==', userId), orderBy('createdAt', 'desc')),
-  );
-  return snap.docs.map((d) => mapSubmission(d.id, d.data()));
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.kycSubmissions)
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error || !data) return [];
+  return data.map((d) => mapSubmission(d.id, d));
 }
 
 export async function getAllKycSubmissions(): Promise<KycSubmission[]> {
-  const snap = await getDocs(query(collection(db, LIVE_COLLECTIONS.kycSubmissions), orderBy('createdAt', 'desc')));
-  return snap.docs.map((d) => mapSubmission(d.id, d.data()));
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.kycSubmissions)
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error || !data) return [];
+  return data.map((d) => mapSubmission(d.id, d));
 }
 
 export async function reviewKyc(id: string, status: 'verified' | 'rejected', reviewNote?: string) {
-  await updateDoc(doc(db, LIVE_COLLECTIONS.kycSubmissions, id), {
+  await supabase.from(LIVE_COLLECTIONS.kycSubmissions).update({
     status,
-    reviewNote: reviewNote ?? null,
-    updatedAt: new Date(),
-  });
+    review_note: reviewNote ?? null,
+    updated_at: nowISO(),
+  }).eq('id', id);
 }
 
 export interface KycDocument {
@@ -117,20 +117,20 @@ export interface KycDocument {
   submittedAt?: Date;
 }
 
-function mapDocument(id: string, data: DocumentData): KycDocument {
+function mapDocument(id: string, data: any): KycDocument {
   return {
     id,
-    userId: data.userId ?? '',
-    userEmail: data.userEmail,
-    clientName: data.clientName ?? '',
-    docType: data.docType ?? '',
-    fileName: data.fileName ?? '',
-    storagePath: data.storagePath,
-    fileUrl: data.fileUrl,
-    fileRemoved: data.fileRemoved === true,
+    userId: data.user_id ?? data.userId ?? '',
+    userEmail: data.user_email ?? data.userEmail,
+    clientName: data.client_name ?? data.clientName ?? '',
+    docType: data.doc_type ?? data.docType ?? '',
+    fileName: data.file_name ?? data.fileName ?? '',
+    storagePath: data.storage_path ?? data.storagePath,
+    fileUrl: data.file_url ?? data.fileUrl,
+    fileRemoved: data.file_removed === true,
     status: data.status ?? 'pending',
-    reviewNote: data.reviewNote,
-    submittedAt: data.submittedAt?.toDate?.(),
+    reviewNote: data.review_note ?? data.reviewNote,
+    submittedAt: data.submitted_at ? new Date(data.submitted_at) : undefined,
   };
 }
 
@@ -147,46 +147,55 @@ export async function uploadIdentityDocument(input: {
 
   const safeName = input.file.name.replace(/[^\w.\-]+/g, '_');
   const storagePath = `kyc/${input.userId}/${Date.now()}_${safeName}`;
-  const fileRef = ref(storage, storagePath);
-  await uploadBytes(fileRef, input.file, { contentType: resolved.contentType });
-  const fileUrl = await getDownloadURL(fileRef);
+  const { error: upErr } = await supabase.storage.from(KYC_BUCKET).upload(storagePath, input.file, { contentType: resolved.contentType });
+  if (upErr) throw upErr;
+  const { data } = supabase.storage.from(KYC_BUCKET).getPublicUrl(storagePath);
+  const fileUrl = data.publicUrl;
 
-  await addDoc(collection(db, LIVE_COLLECTIONS.kycDocuments), {
-    userId: input.userId,
-    userEmail: input.userEmail,
-    clientName: input.clientName,
-    docType: input.docType,
-    fileName: input.file.name,
-    storagePath,
-    fileUrl,
-    fileRemoved: false,
+  await supabase.from(LIVE_COLLECTIONS.kycDocuments).insert({
+    user_id: input.userId,
+    user_email: input.userEmail,
+    client_name: input.clientName,
+    doc_type: input.docType,
+    file_name: input.file.name,
+    storage_path: storagePath,
+    file_url: fileUrl,
+    file_removed: false,
     status: 'pending',
-    submittedAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+    submitted_at: nowISO(),
+    updated_at: nowISO(),
   });
 }
 
 export async function getKycDocumentsForUser(userId: string): Promise<KycDocument[]> {
-  const snap = await getDocs(
-    query(collection(db, LIVE_COLLECTIONS.kycDocuments), where('userId', '==', userId), orderBy('submittedAt', 'desc')),
-  );
-  return snap.docs.map((d) => mapDocument(d.id, d.data()));
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.kycDocuments)
+    .select('*')
+    .eq('user_id', userId)
+    .order('submitted_at', { ascending: false });
+  if (error || !data) return [];
+  return data.map((d) => mapDocument(d.id, d));
 }
 
 export async function getAllKycDocuments(): Promise<KycDocument[]> {
-  const snap = await getDocs(query(collection(db, LIVE_COLLECTIONS.kycDocuments), orderBy('submittedAt', 'desc')));
-  return snap.docs.map((d) => mapDocument(d.id, d.data()));
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.kycDocuments)
+    .select('*')
+    .order('submitted_at', { ascending: false });
+  if (error || !data) return [];
+  return data.map((d) => mapDocument(d.id, d));
 }
 
 export async function removeIdentityDocument(docRow: KycDocument): Promise<void> {
   if (docRow.status === 'approved') throw new Error('Approved documents cannot be removed.');
   if (docRow.storagePath && !docRow.fileRemoved) {
-    await deleteObject(ref(storage, docRow.storagePath));
+    const { error } = await supabase.storage.from(KYC_BUCKET).remove([docRow.storagePath]);
+    if (error) console.error('Failed to remove KYC document from storage:', error);
   }
-  await updateDoc(doc(db, LIVE_COLLECTIONS.kycDocuments, docRow.id), {
-    fileRemoved: true,
-    updatedAt: serverTimestamp(),
-  });
+  await supabase.from(LIVE_COLLECTIONS.kycDocuments).update({
+    file_removed: true,
+    updated_at: nowISO(),
+  }).eq('id', docRow.id);
 }
 
 export async function reviewIdentityDocument(
@@ -197,10 +206,10 @@ export async function reviewIdentityDocument(
   if (status === 'rejected' && !reviewNote?.trim()) {
     throw new Error('Add a note explaining the rejection.');
   }
-  await updateDoc(doc(db, LIVE_COLLECTIONS.kycDocuments, id), {
+  await supabase.from(LIVE_COLLECTIONS.kycDocuments).update({
     status,
-    reviewNote: reviewNote?.trim() || null,
-    reviewedAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+    review_note: reviewNote?.trim() || null,
+    reviewed_at: nowISO(),
+    updated_at: nowISO(),
+  }).eq('id', id);
 }

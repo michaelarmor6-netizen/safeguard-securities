@@ -1,5 +1,4 @@
-import { addDoc, collection, getDocs, orderBy, query, type DocumentData } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase, nowISO } from '../../config/supabase';
 import { LIVE_COLLECTIONS } from '../../config/liveCollections';
 
 export interface AuditLogEntry {
@@ -11,26 +10,26 @@ export interface AuditLogEntry {
   createdAt?: Date;
 }
 
-function mapEntry(id: string, data: DocumentData): AuditLogEntry {
+function mapEntry(id: string, data: any): AuditLogEntry {
   return {
     id,
     actorId: data.actorId ?? '',
     actorEmail: data.actorEmail ?? '',
     action: data.action ?? '',
     details: data.details,
-    createdAt: data.createdAt?.toDate?.(),
+    createdAt: data.createdAt ? new Date(data.createdAt) : undefined,
   };
 }
 
 export async function logAction(actorId: string, actorEmail: string, action: string, details?: string) {
   // Best-effort - a logging failure should never block the underlying admin action.
   try {
-    await addDoc(collection(db, LIVE_COLLECTIONS.auditLogs), {
-      actorId,
-      actorEmail,
+    await supabase.from(LIVE_COLLECTIONS.auditLogs).insert({
+      actor_id: actorId,
+      actor_email: actorEmail,
       action,
       details: details ?? null,
-      createdAt: new Date(),
+      created_at: nowISO(),
     });
   } catch (e) {
     console.error('Failed to write audit log entry:', e);
@@ -38,6 +37,10 @@ export async function logAction(actorId: string, actorEmail: string, action: str
 }
 
 export async function getAuditLog(): Promise<AuditLogEntry[]> {
-  const snap = await getDocs(query(collection(db, LIVE_COLLECTIONS.auditLogs), orderBy('createdAt', 'desc')));
-  return snap.docs.map((d) => mapEntry(d.id, d.data()));
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.auditLogs)
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error || !data) return [];
+  return data.map((d) => mapEntry(d.id, d));
 }

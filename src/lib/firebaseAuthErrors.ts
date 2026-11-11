@@ -14,11 +14,11 @@ export function normalizeAuthEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
-export class FirebaseError extends Error {
+export class SupabaseError extends Error {
   code: string;
   constructor(code: string, message: string) {
     super(message);
     this.code = code;
-    this.name = 'FirebaseError';
+    this.name = 'SupabaseError';
   }
 }

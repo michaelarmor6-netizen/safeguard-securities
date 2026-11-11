@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { supabase, nowISO } from '../../config/supabase';
 
 import { 
   CreditCard, 
@@ -221,11 +222,9 @@ const ManageAccounts: React.FC = () => {
   React.useEffect(() => {
     const loadAccounts = async () => {
       try {
-        const { collection, getDocs } = await import('firebase/firestore');
-        const { db } = await import('../../config/firebase');
-        
-        const accountsSnapshot = await getDocs(collection(db, 'accounts'));
-        const accountsData = accountsSnapshot.docs.map(doc => {
+        const { data, error } = await supabase.from('accounts').select('*');
+        if (error) throw error;
+        const accountsData = (data ?? []).map(doc => {
           const data = doc.data();
           
           // Extract or derive userId
@@ -387,16 +386,12 @@ const ManageAccounts: React.FC = () => {
       }
 
       try {
-        const { doc, updateDoc } = await import('firebase/firestore');
-        const { db } = await import('../../config/firebase');
-        
-        // Update Firestore
-        const accountRef = doc(db, 'accounts', accountId);
-        await updateDoc(accountRef, {
-          isActive: newStatus,
+        // Update Supabase
+        await supabase.from('accounts').update({
+          is_active: newStatus,
           status: statusText,
-          updatedAt: new Date().toISOString()
-        });
+          updated_at: new Date().toISOString()
+        }).eq('id', accountId);
         
         // Update local state
         setAccounts(prevAccounts => 
@@ -454,14 +449,10 @@ Type "DELETE" to confirm permanent deletion:`;
       }
 
       try {
-        const { doc, deleteDoc } = await import('firebase/firestore');
-        const { db } = await import('../../config/firebase');
-        
         console.log(`🗑️ Deleting account ${accountId}...`);
         
-        // Delete from Firestore
-        const accountRef = doc(db, 'accounts', accountId);
-        await deleteDoc(accountRef);
+        // Delete from Supabase
+        await supabase.from('accounts').delete().eq('id', accountId);
         
         // Remove from local state
         setAccounts(prevAccounts => 
@@ -498,17 +489,12 @@ Type "DELETE" to confirm permanent deletion:`;
 
     try {
       console.log('🔧 Starting account update process...');
-      const { doc, updateDoc } = await import('firebase/firestore');
-      const { db } = await import('../../config/firebase');
-      
-      console.log('🔧 Firebase imports successful');
       console.log('🔧 Account ID to update:', editAccountData.id);
       
       // Get original account to preserve userId
       const originalAccount = accounts.find(acc => acc.id === editAccountData.id);
       
-      // Update Firestore
-      const accountRef = doc(db, 'accounts', editAccountData.id);
+      // Update Supabase
       const updateData = {
         accountHolderName: editAccountData.accountHolderName,
         userEmail: editAccountData.userEmail,
@@ -538,9 +524,9 @@ Type "DELETE" to confirm permanent deletion:`;
         originalUserId: originalAccount?.userId 
       });
 
-      console.log('🔧 Updating Firestore with data:', updateData);
-      await updateDoc(accountRef, updateData);
-      console.log('🔧 Firestore update completed successfully');
+      console.log('🔧 Updating Supabase with data:', updateData);
+      await supabase.from('accounts').update(updateData).eq('id', editAccountData.id);
+      console.log('🔧 Supabase update completed successfully');
       
       // Update local state
       setAccounts(prevAccounts => 
@@ -708,23 +694,20 @@ Type "DELETE" to confirm permanent deletion:`;
       const accountNumber = generateAccountNumber();
 
       // ✅ REAL ACCOUNT CREATION: Save to both Firestore and localStorage
-      const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
-      const { db } = await import('../../config/firebase');
-
       const accountData = {
         // Account identification
-        accountNumber,
-        accountHolderName: newAccountData.accountHolderName,
-        userEmail: newAccountData.userEmail,
+        account_number: accountNumber,
+        account_holder_name: newAccountData.accountHolderName,
+        user_email: newAccountData.userEmail,
         email: newAccountData.userEmail,
-        userId: newAccountData.userId, // This must be the user's UID
+        user_id: newAccountData.userId, // This must be the user's UID
         
         // Account details
-        accountType: newAccountData.accountType,
+        account_type: newAccountData.accountType,
         balance: parseFloat(newAccountData.initialDeposit) || 0,
         currency: newAccountData.currency || 'USD',
         status: newAccountData.approvalRequired ? 'pending_approval' : 'active',
-        isActive: !newAccountData.approvalRequired,
+        is_active: !newAccountData.approvalRequired,
         
         // Account features
         features: {
@@ -754,17 +737,21 @@ Type "DELETE" to confirm permanent deletion:`;
         monthlyFee: calculateMonthlyFee(),
         
         // System fields
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        createdBy: user?.uid || 'admin'
+        created_at: nowISO(),
+        updated_at: nowISO(),
+        created_by: user?.id || 'admin'
       };
 
-      console.log('🔥 Creating account in Firestore:', accountData);
+      console.log('🔥 Creating account in Supabase:', accountData);
 
-      // Save to Firestore
+      // Save to Supabase
       const accountId = `${newAccountData.userId}_${newAccountData.accountType}_${Date.now()}`;
-      const accountRef = doc(db, 'accounts', accountId);
-      await setDoc(accountRef, accountData);
+      await supabase.from('accounts').insert({
+        ...accountData,
+        id: accountId,
+        created_at: nowISO(),
+        updated_at: nowISO()
+      });
 
       // Also save to localStorage for immediate client access
       const localAccountKey = `temp_account_${newAccountData.userId}`;
@@ -780,9 +767,9 @@ Type "DELETE" to confirm permanent deletion:`;
       
       // Refresh accounts list
       const loadAccounts = async () => {
-        const { collection, getDocs } = await import('firebase/firestore');
-        const accountsSnapshot = await getDocs(collection(db, 'accounts'));
-        const accountsData = accountsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const { data, error } = await supabase.from('accounts').select('*');
+        if (error) throw error;
+        const accountsData = (data ?? []).map(doc => ({ id: doc.id, ...doc }));
         setAccounts(accountsData);
       };
       await loadAccounts();

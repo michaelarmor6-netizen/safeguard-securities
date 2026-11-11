@@ -25,7 +25,7 @@ export default function SettingsNotificationsSection() {
     try {
       await updatePlatformSettings({ announcementEnabled: form.announcementEnabled, announcementMessage: form.announcementMessage.trim() });
       if (user) {
-        logAction(user.uid, profile?.email ?? '', 'Platform announcement updated', form.announcementEnabled ? form.announcementMessage.trim() : 'disabled');
+        logAction(user.id, profile?.email ?? '', 'Platform announcement updated', form.announcementEnabled ? form.announcementMessage.trim() : 'disabled');
       }
       toast.success('Announcement saved');
     } catch (err) {
@@ -45,7 +45,7 @@ export default function SettingsNotificationsSection() {
         notifyOnLargeTrade: form.notifyOnLargeTrade,
         largeTradeThreshold: Number(form.largeTradeThreshold) || 0,
       });
-      if (user) logAction(user.uid, profile?.email ?? '', 'Admin alert preferences updated');
+      if (user) logAction(user.id, profile?.email ?? '', 'Admin alert preferences updated');
       toast.success('Saved');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save');

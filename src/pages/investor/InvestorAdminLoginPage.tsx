@@ -6,7 +6,7 @@ import { useInvestorAuth } from '../../contexts/InvestorAuthContext';
 import { getFirebaseAuthErrorMessage } from '../../lib/firebaseAuthErrors';
 import { isInvestorAdmin } from '../../lib/investorRoles';
 import { ensureInvestorProfile } from '../../services/investor/profileService';
-import { auth } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 import ThemeToggle from '../../components/ui/ThemeToggle';
 
 export default function InvestorAdminLoginPage() {
@@ -38,12 +38,13 @@ export default function InvestorAdminLoginPage() {
     setBusy(true);
     try {
       await signIn(email, password);
-      const firebaseUser = auth.currentUser;
+      const { data: { session } } = await supabase.auth.getSession();
+      const firebaseUser = session?.user;
       if (!firebaseUser) {
         throw new Error('Sign-in failed');
       }
       const profile = await ensureInvestorProfile(
-        firebaseUser.uid,
+        firebaseUser.id,
         firebaseUser.email ?? email,
       );
       if (!isInvestorAdmin(profile.role)) {

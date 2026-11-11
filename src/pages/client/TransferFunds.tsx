@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  ArrowRight, 
-  Plus, 
-  User, 
-  CreditCard, 
-  Shield, 
-  Clock, 
+import {
+  ArrowRight,
+  Plus,
+  User,
+  CreditCard,
+  Shield,
+  Clock,
   CheckCircle,
   AlertCircle,
   Edit,
@@ -16,16 +16,15 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserAccounts } from '../../hooks/useFirestore';
 import DashboardLayout from '../../components/Layout/DashboardLayout';
-import { db } from '../../config/firebase';
-import { collection, addDoc, getDocs, query, where, deleteDoc, doc } from 'firebase/firestore';
+import { supabase } from '../../config/supabase';
 import toast from 'react-hot-toast';
 
 const TransferFunds: React.FC = () => {
   const { user } = useAuth();
-  
-  // Load user's real accounts from Firebase
+
+  // Load user's real accounts from Supabase
   const { data: userAccounts, loading: accountsLoading, error: accountsError } = useUserAccounts(
-    user?.uid || ''
+    user?.id || ''
   );
 
   const [step, setStep] = useState(1); // 1: Select recipient, 2: Transfer details, 3: Review, 4: Confirmation
@@ -61,25 +60,25 @@ const TransferFunds: React.FC = () => {
   // Set default account when user accounts load
   useEffect(() => {
     if (userAccounts && userAccounts.length > 0 && !fromAccount) {
-      setFromAccount(userAccounts[0].id || userAccounts[0].accountType || 'checking');
+      setFromAccount(userAccounts[0].id || userAccounts[0].account_type || 'checking');
     }
   }, [userAccounts, fromAccount]);
 
-  // Load user's saved recipients from Firebase
+  // Load user's saved recipients from Supabase
   useEffect(() => {
     const loadRecipients = async () => {
-      if (!user?.uid) return;
-      
+      if (!user?.id) return;
+
       try {
         setRecipientsLoading(true);
-        const recipientsQuery = query(
-          collection(db, 'transfer_recipients'),
-          where('userId', '==', user.uid)
-        );
-        const recipientsSnapshot = await getDocs(recipientsQuery);
-        const recipients = recipientsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
+        const { data, error } = await supabase
+          .from('transfer_recipients')
+          .select('*')
+          .eq('user_id', user.id);
+        if (error) throw error;
+        const recipients = (data ?? []).map((row: any) => ({
+          id: row.id,
+          ...row
         }));
         setSavedRecipients(recipients);
       } catch (error) {
@@ -91,7 +90,7 @@ const TransferFunds: React.FC = () => {
     };
 
     loadRecipients();
-  }, [user?.uid]);
+  }, [user?.id]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -108,12 +107,12 @@ const TransferFunds: React.FC = () => {
   const handleAddRecipient = async () => {
     // Validation based on transfer type
     const isInternational = newRecipient.transferType === 'international';
-    
-    if (!user?.uid || !newRecipient.name || !newRecipient.bankName) {
+
+    if (!user?.id || !newRecipient.name || !newRecipient.bankName) {
       toast.error('Please fill in all required fields');
       return;
     }
-    
+
     if (isInternational) {
       if (!newRecipient.iban && !newRecipient.accountNumber) {
         toast.error('Please provide either IBAN or Account Number for international transfers');
@@ -132,7 +131,7 @@ const TransferFunds: React.FC = () => {
 
     try {
       const recipientData = {
-        userId: user.uid,
+        user_id: user.id,
         name: newRecipient.name,
         email: newRecipient.email,
         accountNumber: newRecipient.accountNumber,
@@ -146,14 +145,19 @@ const TransferFunds: React.FC = () => {
         transferType: newRecipient.transferType,
         type: newRecipient.type,
         favorite: false,
-        createdAt: new Date().toISOString()
+        created_at: new Date().toISOString()
       };
 
-      const docRef = await addDoc(collection(db, 'transfer_recipients'), recipientData);
-      
+      const { data: docRef, error } = await supabase
+        .from('transfer_recipients')
+        .insert(recipientData)
+        .select('id')
+        .single();
+      if (error) throw error;
+
       // Add to local state
       setSavedRecipients(prev => [...prev, { id: docRef.id, ...recipientData }]);
-      
+
       // Reset form
       setNewRecipient({
         name: '',
@@ -169,7 +173,7 @@ const TransferFunds: React.FC = () => {
         transferType: 'domestic',
         type: 'External'
       });
-      
+
       setShowAddRecipient(false);
       toast.success('Recipient added successfully!');
     } catch (error) {
@@ -180,7 +184,7 @@ const TransferFunds: React.FC = () => {
 
   const handleDeleteRecipient = async (recipientId: string) => {
     try {
-      await deleteDoc(doc(db, 'transfer_recipients', recipientId));
+      await supabase.from('transfer_recipients').delete().eq('id', recipientId);
       setSavedRecipients(prev => prev.filter(r => r.id !== recipientId));
       toast.success('Recipient deleted successfully!');
     } catch (error) {
@@ -193,18 +197,18 @@ const TransferFunds: React.FC = () => {
     try {
       // Create transfer record
       const transferData = {
-        userId: user?.uid,
-        fromAccountId: fromAccount,
-        recipientId: selectedRecipient?.id,
+        user_id: user?.id,
+        from_account_id: fromAccount,
+        recipient_id: selectedRecipient?.id,
         amount: parseFloat(amount),
         memo: memo,
-        transferDate: transferDate,
+        transfer_date: transferDate,
         status: 'completed',
-        transactionId: `TXN${Date.now()}`,
-        createdAt: new Date().toISOString()
+        transaction_id: `TXN${Date.now()}`,
+        created_at: new Date().toISOString()
       };
 
-      await addDoc(collection(db, 'transfers'), transferData);
+      await supabase.from('transfers').insert(transferData);
       toast.success('Transfer completed successfully!');
       setStep(4);
     } catch (error) {
@@ -293,9 +297,7 @@ const TransferFunds: React.FC = () => {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                  recipient.type === 'Internal' ? 'bg-green-100' : 'bg-blue-100'
-                }`}>
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${recipient.type === 'Internal' ? 'bg-green-100' : 'bg-blue-100'}`}>
                   {recipient.type === 'Internal' ? (
                     <CreditCard className="w-6 h-6 text-green-600" />
                   ) : (
@@ -347,9 +349,7 @@ const TransferFunds: React.FC = () => {
       {/* Selected Recipient */}
       <div className="bg-gray-50 p-4 rounded-lg">
         <div className="flex items-center space-x-3">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-            selectedRecipient?.type === 'Internal' ? 'bg-green-100' : 'bg-blue-100'
-          }`}>
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${selectedRecipient?.type === 'Internal' ? 'bg-green-100' : 'bg-blue-100'}`}>
             {selectedRecipient?.type === 'Internal' ? (
               <CreditCard className="w-5 h-5 text-green-600" />
             ) : (
@@ -373,8 +373,8 @@ const TransferFunds: React.FC = () => {
             className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             {userAccounts?.map((account: any) => (
-              <option key={account.id || account.accountType} value={account.id || account.accountType}>
-                {account.accountHolderName || account.accountName || `${account.accountType} Account`} 
+              <option key={account.id || account.account_type} value={account.id || account.account_type}>
+                {account.account_holder_name || account.account_name || `${account.account_type} Account`}
                 {account.accountNumber ? ` ****${account.accountNumber.slice(-4)}` : ''} - {formatCurrency(account.balance || 0)}
               </option>
             ))}
@@ -396,7 +396,7 @@ const TransferFunds: React.FC = () => {
           </div>
           <p className="text-sm text-gray-500 mt-1">
             Available: {formatCurrency(
-              userAccounts?.find((acc: any) => (acc.id || acc.accountType) === fromAccount)?.balance || 0
+              userAccounts?.find((acc: any) => (acc.id || acc.account_type) === fromAccount)?.balance || 0
             )}
           </p>
         </div>
@@ -408,11 +408,7 @@ const TransferFunds: React.FC = () => {
         <div className="grid grid-cols-2 gap-4">
           <button
             onClick={() => setTransferDate('today')}
-            className={`p-3 border-2 rounded-lg text-left transition-colors ${
-              transferDate === 'today'
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
+            className={`p-3 border-2 rounded-lg text-left transition-colors ${transferDate === 'today' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 hover:border-gray-300'}`}
           >
             <div className="flex items-center space-x-2">
               <Clock className="w-5 h-5" />
@@ -424,11 +420,7 @@ const TransferFunds: React.FC = () => {
           </button>
           <button
             onClick={() => setTransferDate('scheduled')}
-            className={`p-3 border-2 rounded-lg text-left transition-colors ${
-              transferDate === 'scheduled'
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
+            className={`p-3 border-2 rounded-lg text-left transition-colors ${transferDate === 'scheduled' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 hover:border-gray-300'}`}
           >
             <div className="flex items-center space-x-2">
               <Clock className="w-5 h-5" />
@@ -500,13 +492,12 @@ const TransferFunds: React.FC = () => {
           <div className="flex justify-between items-center py-3 border-b border-gray-100">
             <span className="text-gray-600">From</span>
             <span className="font-medium">
-              {userAccounts?.find((acc: any) => (acc.id || acc.accountType) === fromAccount)?.accountHolderName || 
-               userAccounts?.find((acc: any) => (acc.id || acc.accountType) === fromAccount)?.accountName ||
-               `${fromAccount} Account`}
-              {userAccounts?.find((acc: any) => (acc.id || acc.accountType) === fromAccount)?.accountNumber ?
-                ` ****${userAccounts?.find((acc: any) => (acc.id || acc.accountType) === fromAccount)?.accountNumber?.slice(-4)}` :
-                ''
-              }
+              {userAccounts?.find((acc: any) => (acc.id || acc.account_type) === fromAccount)?.account_holder_name ||
+                userAccounts?.find((acc: any) => (acc.id || acc.account_type) === fromAccount)?.account_name ||
+                `${fromAccount} Account`}
+              {userAccounts?.find((acc: any) => (acc.id || acc.account_type) === fromAccount)?.accountNumber ?
+                ` ****${userAccounts?.find((acc: any) => (acc.id || acc.account_type) === fromAccount)?.accountNumber?.slice(-4)}` :
+                ''}
             </span>
           </div>
           <div className="flex justify-between items-center py-3 border-b border-gray-100">
@@ -568,7 +559,7 @@ const TransferFunds: React.FC = () => {
       <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
         <CheckCircle className="w-12 h-12 text-green-600" />
       </div>
-      
+
       <div>
         <h2 className="text-2xl font-semibold text-gray-900">Transfer Successful!</h2>
         <p className="text-gray-600 mt-2">Your transfer has been processed successfully.</p>
@@ -610,15 +601,11 @@ const TransferFunds: React.FC = () => {
           <div className="flex items-center justify-center space-x-4">
             {[1, 2, 3].map((stepNumber) => (
               <div key={stepNumber} className="flex items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  step >= stepNumber ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
-                }`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= stepNumber ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
                   {step > stepNumber ? '✓' : stepNumber}
                 </div>
                 {stepNumber < 3 && (
-                  <div className={`w-16 h-0.5 mx-2 ${
-                    step > stepNumber ? 'bg-blue-600' : 'bg-gray-200'
-                  }`} />
+                  <div className={`w-16 h-0.5 mx-2 ${step > stepNumber ? 'bg-blue-600' : 'bg-gray-200'}`} />
                 )}
               </div>
             ))}
@@ -632,248 +619,240 @@ const TransferFunds: React.FC = () => {
           {step === 3 && renderReview()}
           {step === 4 && renderConfirmation()}
         </div>
-      </div>
 
-      {/* Add Recipient Modal */}
-      {showAddRecipient && (
-        <div className="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Recipient</h3>
-              
-              {/* Transfer Type Selection */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Transfer Type</label>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setNewRecipient({...newRecipient, transferType: 'domestic'})}
-                    className={`p-3 border rounded-lg text-left transition-colors ${
-                      newRecipient.transferType === 'domestic'
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    <div className="font-medium">Domestic Transfer</div>
-                    <div className="text-sm text-gray-600">Within the same country</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setNewRecipient({...newRecipient, transferType: 'international'})}
-                    className={`p-3 border rounded-lg text-left transition-colors ${
-                      newRecipient.transferType === 'international'
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    <div className="font-medium">International Transfer</div>
-                    <div className="text-sm text-gray-600">Cross-border transfers</div>
-                  </button>
-                </div>
-              </div>
+        {/* Add Recipient Modal */}
+        {showAddRecipient && (
+          <div className="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Recipient</h3>
 
-              <div className="space-y-4">
-                {/* Recipient Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Full Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={newRecipient.name}
-                      onChange={(e) => setNewRecipient({...newRecipient, name: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Enter recipient's full name"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                    <input
-                      type="email"
-                      value={newRecipient.email}
-                      onChange={(e) => setNewRecipient({...newRecipient, email: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="recipient@example.com"
-                    />
+                {/* Transfer Type Selection */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Transfer Type</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setNewRecipient({ ...newRecipient, transferType: 'domestic' })}
+                      className={`p-3 border rounded-lg text-left transition-colors ${newRecipient.transferType === 'domestic' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 hover:border-gray-400'}`}
+                    >
+                      <div className="font-medium">Domestic Transfer</div>
+                      <div className="text-sm text-gray-600">Within the same country</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewRecipient({ ...newRecipient, transferType: 'international' })}
+                      className={`p-3 border rounded-lg text-left transition-colors ${newRecipient.transferType === 'international' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 hover:border-gray-400'}`}
+                    >
+                      <div className="font-medium">International Transfer</div>
+                      <div className="text-sm text-gray-600">Cross-border transfers</div>
+                    </button>
                   </div>
                 </div>
 
-                {/* Country Selection for International */}
-                {newRecipient.transferType === 'international' && (
+                <div className="space-y-4">
+                  {/* Recipient Information */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Country <span className="text-red-500">*</span>
+                        Full Name <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        value={newRecipient.country}
-                        onChange={(e) => setNewRecipient({...newRecipient, country: e.target.value})}
+                      <input
+                        type="text"
+                        value={newRecipient.name}
+                        onChange={(e) => setNewRecipient({ ...newRecipient, name: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="US">United States</option>
-                        <option value="GB">United Kingdom</option>
-                        <option value="DE">Germany</option>
-                        <option value="FR">France</option>
-                        <option value="IT">Italy</option>
-                        <option value="ES">Spain</option>
-                        <option value="NL">Netherlands</option>
-                        <option value="CH">Switzerland</option>
-                        <option value="CA">Canada</option>
-                        <option value="AU">Australia</option>
-                        <option value="JP">Japan</option>
-                        <option value="SG">Singapore</option>
-                      </select>
+                        placeholder="Enter recipient's full name"
+                      />
                     </div>
-                    
+
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
-                      <select
-                        value={newRecipient.currency}
-                        onChange={(e) => setNewRecipient({...newRecipient, currency: e.target.value})}
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                      <input
+                        type="email"
+                        value={newRecipient.email}
+                        onChange={(e) => setNewRecipient({ ...newRecipient, email: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="USD">USD - US Dollar</option>
-                        <option value="EUR">EUR - Euro</option>
-                        <option value="GBP">GBP - British Pound</option>
-                        <option value="CHF">CHF - Swiss Franc</option>
-                        <option value="CAD">CAD - Canadian Dollar</option>
-                        <option value="AUD">AUD - Australian Dollar</option>
-                        <option value="JPY">JPY - Japanese Yen</option>
-                        <option value="SGD">SGD - Singapore Dollar</option>
-                      </select>
+                        placeholder="recipient@example.com"
+                      />
                     </div>
                   </div>
-                )}
 
-                {/* Account Information */}
-                {newRecipient.transferType === 'international' ? (
-                  <>
-                    {/* International Fields */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        IBAN <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={newRecipient.iban}
-                        onChange={(e) => setNewRecipient({...newRecipient, iban: e.target.value.toUpperCase()})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="GB82 WEST 1234 5698 7654 32"
-                        maxLength={34}
-                      />
-                      <p className="text-xs text-gray-500 mt-1">International Bank Account Number (34 characters max)</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        SWIFT/BIC Code <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={newRecipient.swiftCode}
-                        onChange={(e) => setNewRecipient({...newRecipient, swiftCode: e.target.value.toUpperCase()})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="DEUTDEFF"
-                        maxLength={11}
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Bank Identifier Code (8 or 11 characters)</p>
-                    </div>
-
-                    {/* Alternative Account Number for non-IBAN countries */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
-                      <input
-                        type="text"
-                        value={newRecipient.accountNumber}
-                        onChange={(e) => setNewRecipient({...newRecipient, accountNumber: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="For non-IBAN countries"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Required if IBAN is not available</p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    {/* Domestic Fields */}
+                  {/* Country Selection for International */}
+                  {newRecipient.transferType === 'international' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Account Number <span className="text-red-500">*</span>
+                          Country <span className="text-red-500">*</span>
                         </label>
+                        <select
+                          value={newRecipient.country}
+                          onChange={(e) => setNewRecipient({ ...newRecipient, country: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="US">United States</option>
+                          <option value="GB">United Kingdom</option>
+                          <option value="DE">Germany</option>
+                          <option value="FR">France</option>
+                          <option value="IT">Italy</option>
+                          <option value="ES">Spain</option>
+                          <option value="NL">Netherlands</option>
+                          <option value="CH">Switzerland</option>
+                          <option value="CA">Canada</option>
+                          <option value="AU">Australia</option>
+                          <option value="JP">Japan</option>
+                          <option value="SG">Singapore</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+                        <select
+                          value={newRecipient.currency}
+                          onChange={(e) => setNewRecipient({ ...newRecipient, currency: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="USD">USD - US Dollar</option>
+                          <option value="EUR">EUR - Euro</option>
+                          <option value="GBP">GBP - British Pound</option>
+                          <option value="CHF">CHF - Swiss Franc</option>
+                          <option value="CAD">CAD - Canadian Dollar</option>
+                          <option value="AUD">AUD - Australian Dollar</option>
+                          <option value="JPY">JPY - Japanese Yen</option>
+                          <option value="SGD">SGD - Singapore Dollar</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Account Information */}
+                  {newRecipient.transferType === 'international' ? (
+                    <>
+                      {/* International Fields */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          IBAN <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={newRecipient.iban}
+                          onChange={(e) => setNewRecipient({ ...newRecipient, iban: e.target.value.toUpperCase() })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="GB82 WEST 1234 5698 7654 32"
+                          maxLength={34}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">International Bank Account Number (34 characters max)</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          SWIFT/BIC Code <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={newRecipient.swiftCode}
+                          onChange={(e) => setNewRecipient({ ...newRecipient, swiftCode: e.target.value.toUpperCase() })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="DEUTDEFF"
+                          maxLength={11}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Bank Identifier Code (8 or 11 characters)</p>
+                      </div>
+
+                      {/* Alternative Account Number for non-IBAN countries */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
                         <input
                           type="text"
                           value={newRecipient.accountNumber}
-                          onChange={(e) => setNewRecipient({...newRecipient, accountNumber: e.target.value})}
+                          onChange={(e) => setNewRecipient({ ...newRecipient, accountNumber: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="1234567890"
+                          placeholder="For non-IBAN countries"
                         />
+                        <p className="text-xs text-gray-500 mt-1">Required if IBAN is not available</p>
                       </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Routing Number <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={newRecipient.routingNumber}
-                          onChange={(e) => setNewRecipient({...newRecipient, routingNumber: e.target.value})}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="021000021"
-                          maxLength={9}
-                        />
+                    </>
+                  ) : (
+                    <>
+                      {/* Domestic Fields */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Account Number <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={newRecipient.accountNumber}
+                            onChange={(e) => setNewRecipient({ ...newRecipient, accountNumber: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="1234567890"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Routing Number <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={newRecipient.routingNumber}
+                            onChange={(e) => setNewRecipient({ ...newRecipient, routingNumber: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="021000021"
+                            maxLength={9}
+                          />
+                        </div>
                       </div>
-                    </div>
-                  </>
-                )}
+                    </>
+                  )}
 
-                {/* Bank Information */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Bank Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={newRecipient.bankName}
-                    onChange={(e) => setNewRecipient({...newRecipient, bankName: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter bank name"
-                  />
-                </div>
-
-                {newRecipient.transferType === 'international' && (
+                  {/* Bank Information */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Bank Address</label>
-                    <textarea
-                      value={newRecipient.bankAddress}
-                      onChange={(e) => setNewRecipient({...newRecipient, bankAddress: e.target.value})}
-                      rows={2}
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Bank Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newRecipient.bankName}
+                      onChange={(e) => setNewRecipient({ ...newRecipient, bankName: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Bank's full address including city and country"
+                      placeholder="Enter bank name"
                     />
                   </div>
-                )}
-              </div>
 
-              <div className="flex space-x-3 mt-6">
-                <button
-                  onClick={() => setShowAddRecipient(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAddRecipient}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Add Recipient
-                </button>
+                  {newRecipient.transferType === 'international' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Bank Address</label>
+                      <textarea
+                        value={newRecipient.bankAddress}
+                        onChange={(e) => setNewRecipient({ ...newRecipient, bankAddress: e.target.value })}
+                        rows={2}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Bank's full address including city and country"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex space-x-3 mt-6">
+                  <button
+                    onClick={() => setShowAddRecipient(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAddRecipient}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Add Recipient
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </DashboardLayout>
   );
 };

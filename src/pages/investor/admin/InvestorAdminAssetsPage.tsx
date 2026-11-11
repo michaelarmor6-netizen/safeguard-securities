@@ -93,7 +93,7 @@ export default function InvestorAdminAssetsPage() {
   const toggleTradable = async (asset: Asset) => {
     try {
       await setAssetTradable(asset.id, !asset.isTradable);
-      if (user) logAction(user.uid, profile?.email ?? '', 'Asset tradable toggled', `${asset.symbol}: ${!asset.isTradable}`);
+      if (user) logAction(user.id, profile?.email ?? '', 'Asset tradable toggled', `${asset.symbol}: ${!asset.isTradable}`);
       setAssets((prev) => prev.map((a) => (a.id === asset.id ? { ...a, isTradable: !a.isTradable } : a)));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to update asset');
@@ -131,7 +131,7 @@ export default function InvestorAdminAssetsPage() {
         isTradable: form.isTradable,
         isActive: true,
       });
-      if (user) logAction(user.uid, profile?.email ?? '', 'Asset added', id);
+      if (user) logAction(user.id, profile?.email ?? '', 'Asset added', id);
       toast.success(`${id} added to catalog`);
       setForm(emptyForm);
       setShowAddForm(false);

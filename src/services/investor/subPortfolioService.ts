@@ -1,16 +1,4 @@
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  query,
-  setDoc,
-  updateDoc,
-  where,
-  type DocumentData,
-} from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase, nowISO } from '../../config/supabase';
 import { LIVE_COLLECTIONS } from '../../config/liveCollections';
 
 export type SubPortfolioAssetClass = 'equities' | 'crypto' | 'commodities' | 'managed_strategy';
@@ -41,77 +29,99 @@ export interface SubPortfolioHolding {
   currency: string;
 }
 
-function mapSleeve(id: string, data: DocumentData): SubPortfolio {
+function mapSleeve(id: string, data: any): SubPortfolio {
   return {
     id,
-    userId: data.userId ?? '',
+    userId: data.user_id ?? data.userId ?? '',
     name: data.name ?? '',
-    assetClass: data.assetClass ?? 'equities',
-    baseCurrency: data.baseCurrency ?? 'USD',
-    targetAllocationPct: data.targetAllocationPct != null ? Number(data.targetAllocationPct) : undefined,
-    riskBand: data.riskBand ?? undefined,
+    assetClass: data.asset_class ?? data.assetClass ?? 'equities',
+    baseCurrency: data.base_currency ?? data.baseCurrency ?? 'USD',
+    targetAllocationPct: data.target_allocation_pct != null ? Number(data.target_allocation_pct) : undefined,
+    riskBand: data.risk_band ?? data.riskBand ?? undefined,
     status: data.status ?? 'active',
   };
 }
 
-function mapHolding(id: string, data: DocumentData): SubPortfolioHolding {
+function mapHolding(id: string, data: any): SubPortfolioHolding {
   return {
     id,
-    subPortfolioId: data.subPortfolioId ?? '',
-    userId: data.userId ?? '',
+    subPortfolioId: data.sub_portfolio_id ?? data.subPortfolioId ?? '',
+    userId: data.user_id ?? data.userId ?? '',
     symbol: data.symbol ?? '',
-    displayName: data.displayName,
+    displayName: data.display_name ?? data.displayName,
     quantity: Number(data.quantity ?? 0),
-    avgCost: Number(data.avgCost ?? 0),
-    markPrice: data.markPrice != null ? Number(data.markPrice) : undefined,
-    unitLabel: data.unitLabel ?? 'shares',
+    avgCost: Number(data.avg_cost ?? data.avgCost ?? 0),
+    markPrice: data.mark_price != null ? Number(data.mark_price) : undefined,
+    unitLabel: data.unit_label ?? data.unitLabel ?? 'shares',
     currency: data.currency ?? 'USD',
   };
 }
 
 export async function getSubPortfoliosForUser(userId: string): Promise<SubPortfolio[]> {
-  const snap = await getDocs(query(collection(db, LIVE_COLLECTIONS.subPortfolios), where('userId', '==', userId)));
-  return snap.docs.map((d) => mapSleeve(d.id, d.data()));
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.subPortfolios)
+    .select('*')
+    .eq('user_id', userId);
+  if (error || !data) return [];
+  return data.map((d) => mapSleeve(d.id, d));
 }
 
 export async function createSubPortfolio(input: Omit<SubPortfolio, 'id' | 'status'>) {
-  return addDoc(collection(db, LIVE_COLLECTIONS.subPortfolios), {
-    ...input,
+  return supabase.from(LIVE_COLLECTIONS.subPortfolios).insert({
+    user_id: input.userId,
+    name: input.name,
+    asset_class: input.assetClass,
+    base_currency: input.baseCurrency,
+    target_allocation_pct: input.targetAllocationPct,
+    risk_band: input.riskBand,
     status: 'active',
-    createdAt: new Date(),
+    created_at: nowISO(),
   });
 }
 
 export async function updateSubPortfolio(id: string, patch: Partial<Pick<SubPortfolio, 'name' | 'targetAllocationPct' | 'riskBand' | 'status'>>) {
-  await updateDoc(doc(db, LIVE_COLLECTIONS.subPortfolios, id), { ...patch, updatedAt: new Date() });
+  await supabase.from(LIVE_COLLECTIONS.subPortfolios).update({ ...patch, updated_at: nowISO() }).eq('id', id);
 }
 
 export async function deleteSubPortfolio(id: string) {
-  const holdings = await getDocs(query(collection(db, LIVE_COLLECTIONS.subPortfolioHoldings), where('subPortfolioId', '==', id)));
-  await Promise.all(holdings.docs.map((d) => deleteDoc(d.ref)));
-  await deleteDoc(doc(db, LIVE_COLLECTIONS.subPortfolios, id));
+  const { data: holdings } = await supabase
+    .from(LIVE_COLLECTIONS.subPortfolioHoldings)
+    .select('id')
+    .eq('sub_portfolio_id', id);
+  await Promise.all((holdings ?? []).map((d) => supabase.from(LIVE_COLLECTIONS.subPortfolioHoldings).delete().eq('id', d.id)));
+  await supabase.from(LIVE_COLLECTIONS.subPortfolios).delete().eq('id', id);
 }
 
 export async function getHoldingsForSleeve(subPortfolioId: string): Promise<SubPortfolioHolding[]> {
-  const snap = await getDocs(
-    query(collection(db, LIVE_COLLECTIONS.subPortfolioHoldings), where('subPortfolioId', '==', subPortfolioId)),
-  );
-  return snap.docs.map((d) => mapHolding(d.id, d.data()));
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.subPortfolioHoldings)
+    .select('*')
+    .eq('sub_portfolio_id', subPortfolioId);
+  if (error || !data) return [];
+  return data.map((d) => mapHolding(d.id, d));
 }
 
 export async function addHoldingToSleeve(input: Omit<SubPortfolioHolding, 'id'>) {
   const id = `${input.subPortfolioId}_${input.symbol.toUpperCase()}`;
-  await setDoc(doc(db, LIVE_COLLECTIONS.subPortfolioHoldings, id), {
-    ...input,
+  await supabase.from(LIVE_COLLECTIONS.subPortfolioHoldings).upsert({
+    id,
+    sub_portfolio_id: input.subPortfolioId,
+    user_id: input.userId,
     symbol: input.symbol.toUpperCase(),
-    updatedAt: new Date(),
+    display_name: input.displayName,
+    quantity: input.quantity,
+    avg_cost: input.avgCost,
+    mark_price: input.markPrice,
+    unit_label: input.unitLabel,
+    currency: input.currency,
+    updated_at: nowISO(),
   });
 }
 
 export async function updateSleeveHolding(id: string, patch: Partial<Pick<SubPortfolioHolding, 'quantity' | 'avgCost' | 'markPrice'>>) {
-  await updateDoc(doc(db, LIVE_COLLECTIONS.subPortfolioHoldings, id), { ...patch, updatedAt: new Date() });
+  await supabase.from(LIVE_COLLECTIONS.subPortfolioHoldings).update({ ...patch, updated_at: nowISO() }).eq('id', id);
 }
 
 export async function deleteSleeveHolding(id: string) {
-  await deleteDoc(doc(db, LIVE_COLLECTIONS.subPortfolioHoldings, id));
+  await supabase.from(LIVE_COLLECTIONS.subPortfolioHoldings).delete().eq('id', id);
 }

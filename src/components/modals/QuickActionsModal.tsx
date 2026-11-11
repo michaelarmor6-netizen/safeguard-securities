@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase, nowISO } from '../../config/supabase';
 import { X, CheckCircle, Clock, AlertTriangle, XCircle, Users, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -33,11 +32,11 @@ interface QuickActionsModalProps {
   onUpdate: () => void;
 }
 
-const QuickActionsModal: React.FC<QuickActionsModalProps> = ({ 
-  request, 
-  isOpen, 
-  onClose, 
-  onUpdate 
+const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
+  request,
+  isOpen,
+  onClose,
+  onUpdate
 }) => {
   const [loading, setLoading] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState(request.status);
@@ -76,23 +75,24 @@ const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
       const updates: any = {
         status: selectedStatus,
         priority: priority,
-        updatedAt: serverTimestamp(),
+        updated_at: nowISO(),
       };
 
       if (assignedTo) {
-        updates.assignedTo = assignedTo;
+        updates.assigned_to = assignedTo;
       }
 
       if (selectedStatus === 'resolved') {
-        updates.resolvedAt = serverTimestamp();
+        updates.resolved_at = nowISO();
       }
 
       if (notes.trim()) {
-        updates.lastNote = notes.trim();
-        updates.noteAddedAt = serverTimestamp();
+        updates.last_note = notes.trim();
+        updates.note_added_at = nowISO();
       }
 
-      await updateDoc(doc(db, 'support_requests', request.id), updates);
+      const { error } = await supabase.from('support_requests').update(updates).eq('id', request.id);
+      if (error) throw error;
 
       toast.success('Support request updated successfully');
       onUpdate();
@@ -109,12 +109,12 @@ const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
     setLoading(true);
     try {
       let updates: any = {
-        updatedAt: serverTimestamp(),
+        updated_at: nowISO(),
       };
 
       switch (action) {
         case 'assign-to-me':
-          updates.assignedTo = 'current-admin-id'; // Replace with actual admin ID
+          updates.assigned_to = 'current-admin-id'; // Replace with actual admin ID
           updates.status = 'in-progress';
           toast.success('Request assigned to you');
           break;
@@ -124,7 +124,7 @@ const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
           break;
         case 'mark-resolved':
           updates.status = 'resolved';
-          updates.resolvedAt = serverTimestamp();
+          updates.resolved_at = nowISO();
           toast.success('Request marked as resolved');
           break;
         case 'send-email':
@@ -133,7 +133,8 @@ const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
           return; // Don't update the document for email actions
       }
 
-      await updateDoc(doc(db, 'support_requests', request.id), updates);
+      const { error } = await supabase.from('support_requests').update(updates).eq('id', request.id);
+      if (error) throw error;
       onUpdate();
     } catch (error) {
       console.error('Error performing quick action:', error);

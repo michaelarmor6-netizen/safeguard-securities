@@ -1,5 +1,4 @@
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 
 export interface IgMarketSnapshot {
   epic: string;
@@ -28,10 +27,6 @@ export interface IgMarketResult {
   instrumentType: string;
   expiry: string;
 }
-
-const snapshotFn = httpsCallable<{ epic: string }, IgMarketSnapshot>(functions, 'igMarketSnapshot');
-const historyFn = httpsCallable<{ epic: string; resolution?: string; max?: number }, IgCandle[]>(functions, 'igMarketHistory');
-const searchFn = httpsCallable<{ searchTerm: string }, IgMarketResult[]>(functions, 'igSearchMarkets');
 
 export async function getIgMarketSnapshot(_epic: string): Promise<IgMarketSnapshot> {
   throw new Error('Live market data is paused.');

@@ -75,7 +75,7 @@ export default function InvestorAdminApplicantsPage() {
     setBusyId(u.id);
     try {
       await updateInvestorProfile(u.id, { accountStatus: status });
-      if (user) logAction(user.uid, adminProfile?.email ?? '', `Applicant ${verb}d`, u.email);
+      if (user) logAction(user.id, adminProfile?.email ?? '', `Applicant ${verb}d`, u.email);
       toast.success(status === 'active' ? 'Approved' : 'Declined');
       load();
     } catch (e) {

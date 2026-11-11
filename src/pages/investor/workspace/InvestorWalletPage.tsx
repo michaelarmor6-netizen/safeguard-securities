@@ -110,7 +110,7 @@ export default function InvestorWalletPage() {
     setUploadingId(r.id);
     try {
       for (const f of [...list]) {
-        await uploadPaymentProof(r.id, user.uid, f);
+        await uploadPaymentProof(r.id, user.id, f);
       }
       toast.success(list.length > 1
         ? `${list.length} files uploaded - our team will verify your payment.`
@@ -128,9 +128,9 @@ export default function InvestorWalletPage() {
   useEffect(() => {
     if (!user) return;
     getFundingDetails().then(setFundingDetails).catch(() => undefined);
-    const unWallet = watchUserWallet(user.uid, setWallet);
+    const unWallet = watchUserWallet(user.id, setWallet);
     const unReqs = watchFundingRequestsForUser(
-      user.uid,
+      user.id,
       (r) => {
         // Friendly nudge when a status changes while they're on the page
         for (const req of r) {
@@ -164,7 +164,7 @@ export default function InvestorWalletPage() {
     }
     setSubmitting(true);
     try {
-      await createFundingRequest(user.uid, profile?.email ?? user.email ?? '', value);
+      await createFundingRequest(user.id, profile?.email ?? user.email ?? '', value);
       toast.success('Funding request submitted for review');
       setAmount('');
     } catch (e) {

@@ -4,21 +4,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useAuth } from '../../contexts/AuthContext';
-import { 
-  collection, 
-  doc, 
-  getDoc, 
-  setDoc, 
-  updateDoc,
-  serverTimestamp 
-} from 'firebase/firestore';
-import { 
-  ref, 
-  uploadBytes, 
-  getDownloadURL, 
-  deleteObject 
-} from 'firebase/storage';
-import { db, storage } from '../../config/firebase';
+import { supabase, nowISO } from '../../config/supabase';
 import { SystemConfig } from '../../types';
 import toast from 'react-hot-toast';
 import { 
@@ -57,18 +43,14 @@ const SystemSettings: React.FC = () => {
   // Test Firestore connection
   const testFirestoreConnection = async () => {
     try {
-      console.log('Testing Firestore connection...');
-      const testRef = doc(db, 'test', 'connection');
-      await setDoc(testRef, { 
-        timestamp: serverTimestamp(), 
-        userId: user?.uid,
-        test: 'connection test'
-      }, { merge: true });
-      console.log('Firestore connection test successful');
-      toast.success('Firestore connection test successful');
+      console.log('Testing Supabase connection...');
+      const { error } = await supabase.from('system_config').select('id').limit(1);
+      if (error) throw error;
+      console.log('Supabase connection test successful');
+      toast.success('Supabase connection test successful');
     } catch (error) {
-      console.error('Firestore connection test failed:', error);
-      toast.error(`Firestore connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Supabase connection test failed:', error);
+      toast.error(`Supabase connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -79,14 +61,17 @@ const SystemSettings: React.FC = () => {
   const loadSystemConfig = async () => {
     try {
       setLoading(true);
-      const configRef = doc(db, 'systemConfig', 'main');
-      const configSnap = await getDoc(configRef);
+      const { data, error } = await supabase
+        .from('system_config')
+        .select('*')
+        .eq('id', 'main')
+        .maybeSingle();
+      if (error) throw error;
       
-      if (configSnap.exists()) {
-        const data = configSnap.data();
+      if (data) {
         setConfig({
           ...data,
-          updatedAt: data.updatedAt?.toDate() || new Date()
+          updated_at: data.updated_at || new Date()
         } as SystemConfig);
       } else {
         // Initialize default config
@@ -362,13 +347,13 @@ SG FINTECH LLC`
             }
           },
           updatedAt: new Date(),
-          updatedBy: user?.uid || '',
+          updatedBy: user?.id || '',
           version: '1.0.0'
         };
         
-        await setDoc(configRef, {
+        await supabase.from('system_config').upsert({
           ...defaultConfig,
-          updatedAt: serverTimestamp()
+          updated_at: nowISO()
         });
         setConfig(defaultConfig);
         toast.success('System configuration initialized');
@@ -446,21 +431,20 @@ SG FINTECH LLC`
           throw new Error('Invalid file type. Please upload an image (JPEG, PNG, GIF, or WebP).');
         }
 
-        const fileRef = ref(storage, path);
+        const LOGO_BUCKET = 'branding';
         
-        console.log('Attempting upload to Firebase Storage...');
+        console.log('Attempting upload to Supabase Storage...');
         
         // Try upload with proper headers for CORS
-        const uploadResult = await uploadBytes(fileRef, file, {
-          customMetadata: {
-            uploadedBy: user?.uid || 'unknown',
-            uploadedAt: new Date().toISOString(),
-            originalName: file.name
-          }
+        const { error: upErr } = await supabase.storage.from(LOGO_BUCKET).upload(path, file, {
+          cacheControl: '3600',
+          upsert: false
         });
-        console.log('Upload completed:', uploadResult);
+        if (upErr) throw upErr;
+        console.log('Upload completed to Supabase Storage');
         
-        const downloadURL = await getDownloadURL(fileRef);
+        const { data: urlData } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path);
+        const downloadURL = urlData.publicUrl;
         console.log('Download URL obtained:', downloadURL);
         
         clearTimeout(timeout);
@@ -488,7 +472,7 @@ SG FINTECH LLC`
   };
 
   const handleSave = async () => {
-    console.log('Save initiated:', { hasConfig: !!config, hasUser: !!user, userId: user?.uid });
+    console.log('Save initiated:', { hasConfig: !!config, hasUser: !!user, userId: user?.id });
     
     if (!config || !user) {
       console.error('Missing config or user:', { config: !!config, user: !!user });
@@ -506,9 +490,6 @@ SG FINTECH LLC`
     try {
       setSaving(true);
       console.log('Setting saving to true...');
-      
-      const configRef = doc(db, 'systemConfig', 'main');
-      console.log('Firebase document reference created');
       
       let updatedConfig = { ...config };
       console.log('Config cloned for update');
@@ -564,26 +545,26 @@ SG FINTECH LLC`
         }
       }
 
-      // Update config in Firestore - use setDoc with merge to avoid updateDoc issues
+      // Update config in Supabase - use upsert with merge to avoid updateDoc issues
       console.log('Preparing config data for save...');
       const configToSave = {
         id: 'main',
-        companyInfo: updatedConfig.companyInfo,
+        company_info: updatedConfig.companyInfo,
         branding: updatedConfig.branding,
         contact: updatedConfig.contact,
         features: updatedConfig.features || {},
         security: updatedConfig.security || {},
         notifications: updatedConfig.notifications || {},
-        updatedAt: serverTimestamp(),
-        updatedBy: user.uid,
+        updated_at: nowISO(),
+        updated_by: user.id,
         version: updatedConfig.version || '1.0.0'
       };
       
       console.log('Config data prepared:', Object.keys(configToSave));
-      console.log('Starting Firestore save operation...');
+      console.log('Starting Supabase save operation...');
 
-      await setDoc(configRef, configToSave, { merge: true });
-      console.log('Firestore save completed successfully');
+      await supabase.from('system_config').upsert(configToSave);
+      console.log('Supabase save completed successfully');
 
       setConfig(updatedConfig);
       clearTimeout(saveTimeout);

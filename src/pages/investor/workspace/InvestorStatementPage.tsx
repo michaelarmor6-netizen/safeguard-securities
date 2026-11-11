@@ -21,7 +21,7 @@ export default function InvestorStatementPage() {
 
   useEffect(() => {
     if (!user) return;
-    Promise.all([getUserPortfolio(user.uid), getPortfolioStatsForUser(user.uid), getUserWallet(user.uid), getTradesForUser(user.uid)])
+    Promise.all([getUserPortfolio(user.id), getPortfolioStatsForUser(user.id), getUserWallet(user.id), getTradesForUser(user.id)])
       .then(([h, s, w, t]) => {
         setHoldings(h);
         setStats(s);

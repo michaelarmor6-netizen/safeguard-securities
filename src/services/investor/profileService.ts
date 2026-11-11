@@ -1,18 +1,4 @@
-import {
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocFromServer,
-  getDocs,
-  orderBy,
-  query,
-  setDoc,
-  updateDoc,
-  where,
-  type DocumentData,
-} from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase, nowISO } from '../../config/supabase';
 import { LIVE_COLLECTIONS } from '../../config/liveCollections';
 import { resolveInvestorRole, isSuperAdminEmail, type AccountStatus, type InvestorRole } from '../../lib/investorRoles';
 import { resolvePlan, type SubscriptionPlan } from '../../lib/subscriptionPlans';
@@ -59,8 +45,7 @@ export interface InvestorAccountManager {
 // Client eligibility level for the self-managed Trade Desk (buy/sell placed
 // by the client themselves). 'standard' clients cannot self-trade - the desk
 // is reserved for advanced (long-partner) and institutional clients; staff
-// set the tier in Admin -> Users. Enforced in the UI (InvestorTradeDeskPage)
-// AND in firestore.rules (adminOrders create) - change both.
+// set the tier in Admin -> Users. Enforced in the UI (InvestorTradeDeskPage).
 export type InvestorTier = 'standard' | 'advanced' | 'institutional';
 
 export const INVESTOR_TIERS: InvestorTier[] = ['standard', 'advanced', 'institutional'];
@@ -70,7 +55,7 @@ function resolveTier(value: unknown): InvestorTier {
 }
 
 // Staff roles always pass; clients need advanced/institutional tier.
-export function canSelfTrade(profile: Pick<InvestorProfile, 'role' | 'investorTier'> | null | undefined): boolean {
+export function canSelfTrade(profile: any): boolean {
   if (!profile) return false;
   if (profile.role !== 'client') return true;
   const tier = profile.investorTier ?? 'standard';
@@ -129,8 +114,8 @@ export interface OnboardingPayload {
   compliance: InvestorCompliance;
 }
 
-function mapProfile(id: string, data: DocumentData): InvestorProfile {
-  const email = String(data.email ?? '');
+function mapProfile(id: string, data: any): InvestorProfile {
+  const email = String(data?.email ?? '');
   return {
     id,
     email,
@@ -142,10 +127,10 @@ function mapProfile(id: string, data: DocumentData): InvestorProfile {
     role: resolveInvestorRole(email, data.role),
     accountStatus: (data.accountStatus as AccountStatus) ?? 'pending',
     investorTier: resolveTier(data.investorTier),
-    createdAt: data.createdAt?.toDate?.() ?? undefined,
+    createdAt: data.createdAt ? new Date(data.createdAt) : undefined,
 
     onboardingCompleted: Boolean(data.onboardingCompleted),
-    onboardingCompletedAt: data.onboardingCompletedAt?.toDate?.() ?? undefined,
+    onboardingCompletedAt: data.onboardingCompletedAt ? new Date(data.onboardingCompletedAt) : undefined,
     onboardingSkipped: Boolean(data.onboardingSkipped),
     onboardingSource: data.onboardingSource,
     createdBy: data.createdBy,
@@ -161,29 +146,28 @@ function mapProfile(id: string, data: DocumentData): InvestorProfile {
     compliance: data.compliance ?? undefined,
     accountManager: data.accountManager ?? undefined,
     plan: resolvePlan(data.plan),
-    planSince: data.planSince?.toDate?.() ?? undefined,
+    planSince: data.planSince ? new Date(data.planSince) : undefined,
   };
 }
 
 export async function getInvestorProfile(uid: string): Promise<InvestorProfile | null> {
-  const ref = doc(db, LIVE_COLLECTIONS.profiles, uid);
-  // Force a real server read on login so a just-activated account never sees a
-  // locally-cached "pending" snapshot from earlier in the session.
-  const snap = await getDocFromServer(ref).catch(() => getDoc(ref));
-  if (!snap.exists()) return null;
-  return mapProfile(snap.id, snap.data());
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.profiles)
+    .select('*')
+    .eq('id', uid)
+    .maybeSingle();
+  if (error || !data) return null;
+  return mapProfile(data.id, data);
 }
 
 export async function ensureInvestorProfile(uid: string, email: string) {
   const existing = await getInvestorProfile(uid);
   if (existing) {
-    // Heal allowlisted super-admins that were saved as client/pending.
     if (isSuperAdminEmail(email) && (existing.role !== 'super_admin' || existing.accountStatus !== 'active')) {
-      await updateDoc(doc(db, LIVE_COLLECTIONS.profiles, uid), {
-        role: 'super_admin',
-        accountStatus: 'active',
-        updatedAt: new Date(),
-      });
+      await supabase
+        .from(LIVE_COLLECTIONS.profiles)
+        .update({ role: 'super_admin', accountStatus: 'active', updatedAt: nowISO() })
+        .eq('id', uid);
       return {
         ...existing,
         role: 'super_admin' as InvestorRole,
@@ -205,48 +189,51 @@ export async function ensureInvestorProfile(uid: string, email: string) {
     createdAt: new Date(),
     onboardingCompleted,
   };
-  await setDoc(doc(db, LIVE_COLLECTIONS.profiles, uid), {
+  await supabase.from(LIVE_COLLECTIONS.profiles).insert({
     ...profile,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    id: uid,
+    createdAt: nowISO(),
+    updatedAt: nowISO(),
   });
   return { id: uid, ...profile };
 }
 
-// Writes the client's own 7-step onboarding submission. Kept separate from
-// updateInvestorProfile, whose narrow Pick<...> type intentionally excludes
-// role/accountStatus as a defense-in-depth guard against self-escalation.
 export async function submitClientOnboarding(uid: string, data: OnboardingPayload) {
-  await updateDoc(doc(db, LIVE_COLLECTIONS.profiles, uid), {
-    ...data,
-    onboardingCompleted: true,
-    onboardingCompletedAt: new Date(),
-    onboardingSource: 'self',
-    updatedAt: new Date(),
-  });
+  await supabase
+    .from(LIVE_COLLECTIONS.profiles)
+    .update({
+      ...data,
+      onboardingCompleted: true,
+      onboardingCompletedAt: nowISO(),
+      onboardingSource: 'self',
+      updatedAt: nowISO(),
+    })
+    .eq('id', uid);
 }
 
-// Lets a client browse the dashboard before finishing the 7-step wizard.
-// Deliberately separate from onboardingCompleted: funding-gated features
-// (AI Engine, Trade Desk) stay locked regardless via isFunded, so this only
-// ever unlocks read-only browsing, never trading - see InvestorAuthContext.
 export async function skipOnboarding(uid: string) {
-  await updateDoc(doc(db, LIVE_COLLECTIONS.profiles, uid), {
-    onboardingSkipped: true,
-    updatedAt: new Date(),
-  });
+  await supabase
+    .from(LIVE_COLLECTIONS.profiles)
+    .update({ onboardingSkipped: true, updatedAt: nowISO() })
+    .eq('id', uid);
 }
 
 export async function getAllInvestorProfiles(): Promise<InvestorProfile[]> {
-  const snap = await getDocs(query(collection(db, LIVE_COLLECTIONS.profiles), orderBy('createdAt', 'desc')));
-  return snap.docs.map((d) => mapProfile(d.id, d.data()));
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.profiles)
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error || !data) return [];
+  return data.map((d) => mapProfile(d.id, d));
 }
 
 export async function getPendingApplicants(): Promise<InvestorProfile[]> {
-  const snap = await getDocs(
-    query(collection(db, LIVE_COLLECTIONS.profiles), where('accountStatus', '==', 'pending')),
-  );
-  return snap.docs.map((d) => mapProfile(d.id, d.data()));
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.profiles)
+    .select('*')
+    .eq('account_status', 'pending');
+  if (error || !data) return [];
+  return data.map((d) => mapProfile(d.id, d));
 }
 
 export async function updateInvestorProfile(
@@ -268,14 +255,12 @@ export async function updateInvestorProfile(
     >
   >,
 ) {
-  await updateDoc(doc(db, LIVE_COLLECTIONS.profiles, uid), { ...patch, updatedAt: new Date() });
+  await supabase
+    .from(LIVE_COLLECTIONS.profiles)
+    .update({ ...patch, updated_at: nowISO() })
+    .eq('id', uid);
 }
 
-// Deletes only the Firestore profile document - does NOT delete the
-// underlying Firebase Auth user, if one still exists. Safe/expected for
-// orphaned profiles left behind by deleted-and-recreated test accounts;
-// for a profile with a live Auth user, deleting just the profile means
-// ensureInvestorProfile() will silently recreate a blank one on next login.
 export async function deleteInvestorProfile(uid: string) {
-  await deleteDoc(doc(db, LIVE_COLLECTIONS.profiles, uid));
+  await supabase.from(LIVE_COLLECTIONS.profiles).delete().eq('id', uid);
 }

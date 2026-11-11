@@ -22,7 +22,7 @@ export default function InvestorTradeHistoryPage() {
     let cancelled = false;
     const run = (initial: boolean) => {
       if (initial) setLoading(true);
-      getTradesForUser(user.uid)
+      getTradesForUser(user.id)
         .then((rows) => {
           if (!cancelled) setTrades(rows);
         })
@@ -53,7 +53,7 @@ export default function InvestorTradeHistoryPage() {
     }
     setSubmitting(true);
     try {
-      await createOrder(user.uid, profile?.email ?? user.email ?? '', symbol.trim(), orderSide, qty);
+      await createOrder(user.id, profile?.email ?? user.email ?? '', symbol.trim(), orderSide, qty);
       toast.success('Order submitted for execution');
       setSymbol('');
       setQuantity('');

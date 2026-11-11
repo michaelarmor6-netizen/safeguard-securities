@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Bell, X, Eye, Clock, AlertCircle } from 'lucide-react';
 
@@ -29,52 +28,72 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ className = '' 
     if (!user) return;
 
     // Listen for new support requests (for real-time notifications)
-    const supportRequestsQuery = query(
-      collection(db, 'support_requests'),
-      where('status', '==', 'new'),
-      orderBy('timestamp', 'desc'),
-      limit(10)
-    );
-
-    const unsubscribe = onSnapshot(supportRequestsQuery, (snapshot) => {
-      const newNotifications: SupportNotification[] = [];
-      
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added') {
-          const data = change.doc.data();
+    const channel = supabase
+      .channel('support-requests-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'support_requests',
+          filter: `status=eq.new`,
+        },
+        (payload) => {
+          const data = payload.new as any;
           const notification: SupportNotification = {
-            id: change.doc.id,
-            ticketId: data.ticketId,
+            id: data.id,
+            ticketId: data.ticket_id,
             subject: data.subject,
             priority: data.priority,
             timestamp: data.timestamp,
             read: false,
             type: 'new_request'
           };
-          newNotifications.push(notification);
-        }
-      });
+          setNotifications(prev => [notification, ...prev]);
+          setUnreadCount(prev => prev + 1);
 
-      if (newNotifications.length > 0) {
-        setNotifications(prev => [...newNotifications, ...prev]);
-        setUnreadCount(prev => prev + newNotifications.length);
-        
-        // Show browser notification if supported
-        if ('Notification' in window && Notification.permission === 'granted') {
-          newNotifications.forEach(notification => {
+          // Show browser notification if supported
+          if ('Notification' in window && Notification.permission === 'granted') {
             new Notification(`New Support Request: ${notification.ticketId}`, {
               body: notification.subject,
               icon: '/favicon.ico',
               tag: notification.id
             });
-          });
-        }
-      }
-      
-      setLoading(false);
-    });
+          }
+        },
+      )
+      .subscribe();
 
-    return () => unsubscribe();
+    // Initial load
+    supabase
+      .from('support_requests')
+      .select('*')
+      .eq('status', 'new')
+      .order('timestamp', { ascending: false })
+      .limit(10)
+      .then(({ data, error }) => {
+        if (error) {
+          setLoading(false);
+          return;
+        }
+        const rows = data ?? [];
+        const mapped: SupportNotification[] = rows.map((d) => ({
+          id: d.id,
+          ticketId: d.ticket_id,
+          subject: d.subject,
+          priority: d.priority,
+          timestamp: d.timestamp,
+          read: false,
+          type: 'new_request'
+        }));
+        setNotifications(mapped);
+        setUnreadCount(mapped.length);
+        setLoading(false);
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   // Request notification permission on component mount
@@ -140,13 +159,13 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ className = '' 
     const then = new Date(timestamp);
     const diffMs = now.getTime() - then.getTime();
     const diffMins = Math.floor(diffMs / 60000);
-    
+
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
-    
+
     const diffHours = Math.floor(diffMins / 60);
     if (diffHours < 24) return `${diffHours}h ago`;
-    
+
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays}d ago`;
   };
@@ -212,7 +231,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ className = '' 
               <div className="py-2">
                 {notifications.map((notification) => {
                   const PriorityIcon = getPriorityIcon(notification.priority);
-                  
+
                   return (
                     <div
                       key={notification.id}
@@ -227,7 +246,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ className = '' 
                           <div className={`p-1 rounded-full ${getPriorityColor(notification.priority)}`}>
                             <PriorityIcon size={14} />
                           </div>
-                          
+
                           {/* Content */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
@@ -246,7 +265,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ className = '' 
                             </p>
                           </div>
                         </div>
-                        
+
                         {/* Actions */}
                         <div className="flex items-center gap-1">
                           {!notification.read && (

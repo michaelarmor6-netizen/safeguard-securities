@@ -36,7 +36,7 @@ const STATUS_LABEL: Record<string, string> = {
 export default function InvestorAdminInvoicesPage() {
   const navigate = useNavigate();
   const { user, profile } = useInvestorAuth();
-  const canWrite = profile ? isFinanceRole(profile.role) : false;
+  const canWrite = profile ? isFinanceRole(profile.role as any) : false;
   const [rows, setRows] = useState<StaffInvoice[]>([]);
   const [clients, setClients] = useState<InvestorProfile[]>([]);
   const [creating, setCreating] = useState(false);
@@ -130,10 +130,10 @@ export default function InvestorAdminInvoicesPage() {
         dueDate: dueDate ? new Date(`${dueDate}T17:00:00`) : null,
         includePaymentInstructions: includePay,
         sendMode,
-        createdByUid: user.uid,
+        createdByUid: user.id,
         createdByEmail: profile?.email ?? user.email ?? '',
       });
-      await logAction(user.uid, profile?.email ?? '', 'Invoice issued', `${billToEmail} ${sendMode}`);
+      await logAction(user.id, profile?.email ?? '', 'Invoice issued', `${billToEmail} ${sendMode}`);
       if (sendMode === 'auto') {
         try {
           await sendInvoiceEmail(id);
@@ -414,7 +414,7 @@ export default function InvestorAdminInvoicesPage() {
                         setBusyId(inv.id);
                         try {
                           await sendInvoiceEmail(inv.id);
-                          if (user) logAction(user.uid, profile?.email ?? '', 'Invoice emailed', inv.number);
+                          if (user) logAction(user.id, profile?.email ?? '', 'Invoice emailed', inv.number);
                           toast.success('Invoice emailed');
                           load();
                         } catch (e) {
@@ -439,7 +439,7 @@ export default function InvestorAdminInvoicesPage() {
                         setBusyId(inv.id);
                         try {
                           await markInvoicePaid(inv.id);
-                          if (user) logAction(user.uid, profile?.email ?? '', 'Invoice marked paid', inv.number);
+                          if (user) logAction(user.id, profile?.email ?? '', 'Invoice marked paid', inv.number);
                           load();
                         } catch (e) {
                           toast.error(e instanceof Error ? e.message : 'Failed');
@@ -460,7 +460,7 @@ export default function InvestorAdminInvoicesPage() {
                         setBusyId(inv.id);
                         try {
                           await voidInvoice(inv.id);
-                          if (user) logAction(user.uid, profile?.email ?? '', 'Invoice voided', inv.number);
+                          if (user) logAction(user.id, profile?.email ?? '', 'Invoice voided', inv.number);
                           load();
                         } catch (e) {
                           toast.error(e instanceof Error ? e.message : 'Failed');

@@ -31,7 +31,7 @@ export default function InvestorAiEnginePage() {
 
   const loadHistory = () => {
     if (!user) return;
-    getSignalHistoryForUser(user.uid)
+    getSignalHistoryForUser(user.id)
       .then(setHistory)
       .catch(() => {});
   };
@@ -71,7 +71,7 @@ export default function InvestorAiEnginePage() {
     }
     setPlacingOrder(true);
     try {
-      await createOrder(user.uid, profile?.email ?? user.email ?? '', signal.symbol, signal.side, qty);
+      await createOrder(user.id, profile?.email ?? user.email ?? '', signal.symbol, signal.side, qty);
       toast.success('Order submitted as pending — an admin will review and execute it');
       setQuantity('');
     } catch (err) {

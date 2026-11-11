@@ -46,7 +46,7 @@ function FillRow({ order, onDone }: { order: InvestorOrder; onDone: () => void }
         ...(order.commission != null ? { commission: order.commission } : {}),
       });
       if (adminUser) {
-        logAction(adminUser.uid, adminProfile?.email ?? '', 'Order filled', `${order.userEmail ?? order.userId}: ${order.symbol} ${result.tradeRef}`);
+        logAction(adminUser.id, adminProfile?.email ?? '', 'Order filled', `${order.userEmail ?? order.userId}: ${order.symbol} ${result.tradeRef}`);
       }
       toast.success(`Filled — ${result.tradeRef}`);
       setFilling(false);
@@ -102,7 +102,7 @@ export default function OrderRowActions({ order, onDone }: { order: InvestorOrde
   const approve = async () => {
     try {
       await markOrderWorking(order.id);
-      if (adminUser) logAction(adminUser.uid, adminProfile?.email ?? '', 'Order approved', `${order.userEmail ?? order.userId}: ${order.symbol}`);
+      if (adminUser) logAction(adminUser.id, adminProfile?.email ?? '', 'Order approved', `${order.userEmail ?? order.userId}: ${order.symbol}`);
       toast.success('Order approved');
       onDone();
     } catch (err) {
@@ -115,7 +115,7 @@ export default function OrderRowActions({ order, onDone }: { order: InvestorOrde
     if (!reason) return;
     try {
       await rejectOrder(order.id, reason);
-      if (adminUser) logAction(adminUser.uid, adminProfile?.email ?? '', 'Order rejected', `${order.userEmail ?? order.userId}: ${order.symbol} — ${reason}`);
+      if (adminUser) logAction(adminUser.id, adminProfile?.email ?? '', 'Order rejected', `${order.userEmail ?? order.userId}: ${order.symbol} — ${reason}`);
       toast.success('Order rejected');
       onDone();
     } catch (err) {
@@ -127,7 +127,7 @@ export default function OrderRowActions({ order, onDone }: { order: InvestorOrde
     if (!window.confirm(`Cancel this order (${order.symbol})?`)) return;
     try {
       await cancelOrder(order.id);
-      if (adminUser) logAction(adminUser.uid, adminProfile?.email ?? '', 'Order cancelled', `${order.userEmail ?? order.userId}: ${order.symbol}`);
+      if (adminUser) logAction(adminUser.id, adminProfile?.email ?? '', 'Order cancelled', `${order.userEmail ?? order.userId}: ${order.symbol}`);
       toast.success('Order cancelled');
       onDone();
     } catch (err) {

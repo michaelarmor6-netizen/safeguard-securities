@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 
 const AccountSyncDebug: React.FC<{ userId?: string }> = ({ userId }) => {
   const [firestoreData, setFirestoreData] = useState<any>(null);
@@ -9,33 +8,34 @@ const AccountSyncDebug: React.FC<{ userId?: string }> = ({ userId }) => {
 
   const checkAccountData = async () => {
     if (!userId) return;
-    
+
     setLoading(true);
     try {
       console.log('🔍 AccountSyncDebug: Checking account data for user:', userId);
-      
-      // Check Firestore
-      const accountsQuery = query(
-        collection(db, 'accounts'),
-        where('userId', '==', userId)
-      );
-      
-      const accountsSnapshot = await getDocs(accountsQuery);
-      const firestoreAccounts = accountsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+
+      // Check Supabase
+      const { data: accounts, error } = await supabase
+        .from('accounts')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      const supabaseAccounts = (accounts ?? []).map((row: any) => ({
+        id: row.id,
+        ...row
       }));
-      
+
       // Check localStorage
       const localAccountKey = `temp_account_${userId}`;
       const localAccount = localStorage.getItem(localAccountKey);
-      
-      setFirestoreData(firestoreAccounts);
+
+      setFirestoreData(supabaseAccounts);
       setLocalStorageData(localAccount ? JSON.parse(localAccount) : null);
-      
-      console.log('🔍 Firestore accounts:', firestoreAccounts);
+
+      console.log('🔍 Supabase accounts:', supabaseAccounts);
       console.log('🔍 LocalStorage account:', localAccount);
-      
+
     } catch (error) {
       console.error('🔍 Error checking account data:', error);
     } finally {
@@ -46,18 +46,18 @@ const AccountSyncDebug: React.FC<{ userId?: string }> = ({ userId }) => {
   useEffect(() => {
     if (userId) {
       checkAccountData();
-      
+
       // Auto-refresh every 10 seconds
       const interval = setInterval(checkAccountData, 10000);
-      
+
       // Listen for account updates
       const handleAccountUpdate = () => {
         console.log('🔧 Account update event received, refreshing debug data...');
         checkAccountData();
       };
-      
+
       window.addEventListener('accountUpdated', handleAccountUpdate);
-      
+
       return () => {
         clearInterval(interval);
         window.removeEventListener('accountUpdated', handleAccountUpdate);
@@ -99,29 +99,29 @@ const AccountSyncDebug: React.FC<{ userId?: string }> = ({ userId }) => {
           {loading ? '🔄' : 'Refresh'}
         </button>
       </div>
-      
+
       <div style={{ marginBottom: '10px' }}>
         <strong>User ID:</strong> {userId}
       </div>
-      
+
       <div style={{ marginBottom: '10px' }}>
-        <strong>Firestore Accounts ({firestoreData?.length || 0}):</strong>
+        <strong>Supabase Accounts ({firestoreData?.length || 0}):</strong>
         {firestoreData && firestoreData.length > 0 ? (
           <div style={{ background: '#F3F4F6', padding: '8px', borderRadius: '4px', marginTop: '4px' }}>
             {firestoreData.map((account: any, index: number) => (
               <div key={account.id} style={{ marginBottom: '4px' }}>
                 <div><strong>#{index + 1} Balance:</strong> ${account.balance || 0}</div>
-                <div><strong>Type:</strong> {account.accountType}</div>
-                <div><strong>Status:</strong> {account.status} / Active: {account.isActive ? 'Yes' : 'No'}</div>
-                <div><strong>Updated:</strong> {account.updatedAt ? new Date(account.updatedAt.seconds * 1000).toLocaleString() : 'Never'}</div>
+                <div><strong>Type:</strong> {account.account_type}</div>
+                <div><strong>Status:</strong> {account.status} / Active: {account.is_active ? 'Yes' : 'No'}</div>
+                <div><strong>Updated:</strong> {account.updated_at ? new Date(account.updated_at).toLocaleString() : 'Never'}</div>
               </div>
             ))}
           </div>
         ) : (
-          <div style={{ color: '#EF4444', marginTop: '4px' }}>No Firestore accounts found</div>
+          <div style={{ color: '#EF4444', marginTop: '4px' }}>No Supabase accounts found</div>
         )}
       </div>
-      
+
       <div>
         <strong>LocalStorage Account:</strong>
         {localStorageData ? (
@@ -134,10 +134,10 @@ const AccountSyncDebug: React.FC<{ userId?: string }> = ({ userId }) => {
           <div style={{ color: '#EF4444', marginTop: '4px' }}>No localStorage account found</div>
         )}
       </div>
-      
+
       <div style={{ marginTop: '10px', padding: '8px', background: '#EFF6FF', borderRadius: '4px' }}>
         <div style={{ fontSize: '10px', color: '#1D4ED8' }}>
-          <strong>📝 Admin Changes:</strong> Should appear in Firestore within seconds
+          <strong>📝 Admin Changes:</strong> Should appear in Supabase within seconds
         </div>
         <div style={{ fontSize: '10px', color: '#1D4ED8' }}>
           <strong>🔄 Client Updates:</strong> Should sync automatically or on refresh

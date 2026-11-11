@@ -1,16 +1,4 @@
-import {
-  collection,
-  doc,
-  getDocs,
-  limit,
-  onSnapshot,
-  orderBy,
-  query,
-  updateDoc,
-  type DocumentData,
-  type Unsubscribe,
-} from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase, nowISO } from '../../config/supabase';
 import { LIVE_COLLECTIONS } from '../../config/liveCollections';
 
 export interface StaffNotice {
@@ -25,50 +13,55 @@ export interface StaffNotice {
   createdAt?: Date;
 }
 
-function mapNotice(id: string, data: DocumentData): StaffNotice {
+function mapNotice(id: string, data: any): StaffNotice {
   return {
     id,
     type: String(data.type ?? ''),
     title: data.title ?? 'Notification',
     body: data.body ?? '',
     href: data.href ?? '/admin/transactions',
-    invoiceId: data.invoiceId,
-    userId: data.userId,
+    invoiceId: data.invoice_id ?? data.invoiceId,
+    userId: data.user_id ?? data.userId,
     read: data.read === true,
-    createdAt: data.createdAt?.toDate?.(),
+    createdAt: data.created_at ? new Date(data.created_at) : undefined,
   };
 }
 
 export function subscribeStaffNotices(
   onChange: (rows: StaffNotice[]) => void,
-): Unsubscribe {
-  const q = query(
-    collection(db, LIVE_COLLECTIONS.staffNotifications),
-    orderBy('createdAt', 'desc'),
-    limit(40),
-  );
-  return onSnapshot(
-    q,
-    (snap) => onChange(snap.docs.map((d) => mapNotice(d.id, d.data()))),
-    () => {
-      getDocs(query(collection(db, LIVE_COLLECTIONS.staffNotifications), limit(40)))
-        .then((snap) =>
-          onChange(
-            snap.docs
-              .map((d) => mapNotice(d.id, d.data()))
-              .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0)),
-          ),
-        )
-        .catch(() => onChange([]));
-    },
-  );
+) {
+  const channel = supabase
+    .channel('staff-notices')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: LIVE_COLLECTIONS.staffNotifications,
+      },
+      () => {
+        getAllStaffNotices().then(onChange).catch(() => onChange([]));
+      },
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+
+async function getAllStaffNotices(): Promise<StaffNotice[]> {
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.staffNotifications)
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(40);
+  if (error || !data) return [];
+  return data.map((d) => mapNotice(d.id, d));
 }
 
 export async function markStaffNoticeRead(id: string) {
-  await updateDoc(doc(db, LIVE_COLLECTIONS.staffNotifications, id), {
-    read: true,
-    updatedAt: new Date(),
-  });
+  await supabase.from(LIVE_COLLECTIONS.staffNotifications).update({ read: true, updated_at: nowISO() }).eq('id', id);
 }
 
 export async function markAllStaffNoticesRead(rows: StaffNotice[]) {

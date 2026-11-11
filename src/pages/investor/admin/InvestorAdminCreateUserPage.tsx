@@ -29,7 +29,7 @@ export default function InvestorAdminCreateUserPage() {
     });
 
     if (user) {
-      logAction(user.uid, profile?.email ?? '', 'Investor account created', core.email);
+      logAction(user.id, profile?.email ?? '', 'Investor account created', core.email);
     }
 
     return { firstName: core.firstName, lastName: core.lastName, email: core.email, temporaryPassword, uid };

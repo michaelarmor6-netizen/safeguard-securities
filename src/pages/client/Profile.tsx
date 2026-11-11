@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Shield, 
-  Bell, 
-  CreditCard, 
-  Eye, 
-  EyeOff, 
-  Edit3, 
-  Save, 
+import {
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Shield,
+  Bell,
+  CreditCard,
+  Eye,
+  EyeOff,
+  Edit3,
+  Save,
   X,
   Camera,
   Upload,
@@ -32,8 +32,7 @@ import SecuritySettings from '../../components/modals/SecuritySettings';
 import DashboardLayout from '../../components/Layout/DashboardLayout';
 import SearchableCountrySelect from '../../components/ui/SearchableCountrySelect';
 import { useAuth } from '../../contexts/AuthContext';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 import toast from 'react-hot-toast';
 
 const Profile: React.FC = () => {
@@ -44,7 +43,7 @@ const Profile: React.FC = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showSecuritySettings, setShowSecuritySettings] = useState(false);
-  
+
   // Enhanced user information with international address support
   const [formData, setFormData] = useState({
     // Personal Information
@@ -55,7 +54,7 @@ const Profile: React.FC = () => {
     dateOfBirth: '',
     nationality: '',
     occupation: '',
-    
+
     // Home Address (International)
     homeAddress: {
       street: '',
@@ -67,7 +66,7 @@ const Profile: React.FC = () => {
       country: '',
       region: ''
     },
-    
+
     // Office Address (International)
     officeAddress: {
       companyName: '',
@@ -81,7 +80,7 @@ const Profile: React.FC = () => {
       country: '',
       region: ''
     },
-    
+
     // Emergency Contact
     emergencyContact: {
       name: '',
@@ -100,13 +99,12 @@ const Profile: React.FC = () => {
         lastName: user.lastName || '',
         email: user.email || '',
         phoneNumber: user.phoneNumber || '',
-        // Initialize other fields with existing data or empty strings
-        dateOfBirth: (user as any).dateOfBirth || '',
+        dateOfBirth: (user as any).date_of_birth || '',
         nationality: (user as any).nationality || '',
         occupation: (user as any).occupation || '',
-        homeAddress: (user as any).homeAddress || prevData.homeAddress,
-        officeAddress: (user as any).officeAddress || prevData.officeAddress,
-        emergencyContact: (user as any).emergencyContact || prevData.emergencyContact,
+        homeAddress: (user as any).home_address || prevData.homeAddress,
+        officeAddress: (user as any).office_address || prevData.officeAddress,
+        emergencyContact: (user as any).emergency_contact || prevData.emergencyContact,
       }));
     }
   }, [user]);
@@ -135,24 +133,23 @@ const Profile: React.FC = () => {
 
   // Save profile changes
   const handleSave = async () => {
-    if (!user?.uid) return;
+    if (!user?.id) return;
 
     setLoading(true);
     try {
-      // Update user document in Firestore
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phoneNumber: formData.phoneNumber,
-        dateOfBirth: formData.dateOfBirth,
+      // Update user document in Supabase
+      await supabase.from('users').update({
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        phone_number: formData.phoneNumber,
+        date_of_birth: formData.dateOfBirth,
         nationality: formData.nationality,
         occupation: formData.occupation,
-        homeAddress: formData.homeAddress,
-        officeAddress: formData.officeAddress,
-        emergencyContact: formData.emergencyContact,
-        updatedAt: new Date()
-      });
+        home_address: formData.homeAddress,
+        office_address: formData.officeAddress,
+        emergency_contact: formData.emergencyContact,
+        updated_at: new Date().toISOString()
+      }).eq('id', user.id);
 
       // Update auth context
       await updateProfile({
@@ -170,8 +167,6 @@ const Profile: React.FC = () => {
       setLoading(false);
     }
   };
-
-
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -227,9 +222,9 @@ const Profile: React.FC = () => {
         <div className="relative">
           <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
             {user?.profileImageUrl ? (
-              <img 
-                src={user.profileImageUrl} 
-                alt="Profile" 
+              <img
+                src={user.profileImageUrl}
+                alt="Profile"
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -253,7 +248,7 @@ const Profile: React.FC = () => {
             {formData.firstName} {formData.lastName}
           </h4>
           <p className="text-sm text-gray-500 mb-2">
-            Account ID: {user?.uid.substring(0, 8).toUpperCase()}
+            Account ID: {user?.id.substring(0, 8).toUpperCase()}
           </p>
           <div className="flex items-center gap-2 text-sm">
             <div className="flex items-center gap-1 text-green-600">
@@ -274,9 +269,7 @@ const Profile: React.FC = () => {
               value={formData.firstName}
               onChange={(e) => handleInputChange('personal', 'firstName', e.target.value)}
               disabled={!isEditing}
-              className={`w-full px-4 py-3 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-4 py-3 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
             <User className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
           </div>
@@ -290,9 +283,7 @@ const Profile: React.FC = () => {
               value={formData.lastName}
               onChange={(e) => handleInputChange('personal', 'lastName', e.target.value)}
               disabled={!isEditing}
-              className={`w-full px-4 py-3 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-4 py-3 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
             <User className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
           </div>
@@ -321,9 +312,7 @@ const Profile: React.FC = () => {
               onChange={(e) => handleInputChange('personal', 'phoneNumber', e.target.value)}
               disabled={!isEditing}
               placeholder="+1 (555) 123-4567"
-              className={`w-full px-4 py-3 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-4 py-3 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
             <Phone className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
           </div>
@@ -337,9 +326,7 @@ const Profile: React.FC = () => {
               value={formData.dateOfBirth}
               onChange={(e) => handleInputChange('personal', 'dateOfBirth', e.target.value)}
               disabled={!isEditing}
-              className={`w-full px-4 py-3 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-4 py-3 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
             <Calendar className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
           </div>
@@ -365,9 +352,7 @@ const Profile: React.FC = () => {
               onChange={(e) => handleInputChange('personal', 'occupation', e.target.value)}
               disabled={!isEditing}
               placeholder="e.g., Software Engineer, Doctor, Teacher"
-              className={`w-full px-4 py-3 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-4 py-3 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
             <Briefcase className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
           </div>
@@ -380,7 +365,7 @@ const Profile: React.FC = () => {
           <Home className="w-5 h-5 text-gray-600" />
           <h4 className="text-md font-semibold text-gray-900">Home Address</h4>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Street Number</label>
@@ -390,12 +375,10 @@ const Profile: React.FC = () => {
               onChange={(e) => handleInputChange('homeAddress', 'streetNumber', e.target.value)}
               disabled={!isEditing}
               placeholder="123"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
           </div>
-          
+
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">Street Name *</label>
             <input
@@ -404,9 +387,7 @@ const Profile: React.FC = () => {
               onChange={(e) => handleInputChange('homeAddress', 'street', e.target.value)}
               disabled={!isEditing}
               placeholder="Main Street"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
           </div>
         </div>
@@ -420,9 +401,7 @@ const Profile: React.FC = () => {
               onChange={(e) => handleInputChange('homeAddress', 'apartment', e.target.value)}
               disabled={!isEditing}
               placeholder="Apt 4B"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
           </div>
 
@@ -434,9 +413,7 @@ const Profile: React.FC = () => {
               onChange={(e) => handleInputChange('homeAddress', 'city', e.target.value)}
               disabled={!isEditing}
               placeholder="New York"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
           </div>
 
@@ -448,9 +425,7 @@ const Profile: React.FC = () => {
               onChange={(e) => handleInputChange('homeAddress', 'state', e.target.value)}
               disabled={!isEditing}
               placeholder="NY"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
           </div>
 
@@ -462,9 +437,7 @@ const Profile: React.FC = () => {
               onChange={(e) => handleInputChange('homeAddress', 'postalCode', e.target.value)}
               disabled={!isEditing}
               placeholder="10001"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
           </div>
         </div>
@@ -490,9 +463,7 @@ const Profile: React.FC = () => {
               onChange={(e) => handleInputChange('homeAddress', 'region', e.target.value)}
               disabled={!isEditing}
               placeholder="North America, Europe, etc."
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
           </div>
         </div>
@@ -504,7 +475,7 @@ const Profile: React.FC = () => {
           <Building className="w-5 h-5 text-gray-600" />
           <h4 className="text-md font-semibold text-gray-900">Office Address (Optional)</h4>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
@@ -514,9 +485,7 @@ const Profile: React.FC = () => {
               onChange={(e) => handleInputChange('officeAddress', 'companyName', e.target.value)}
               disabled={!isEditing}
               placeholder="Company Name Inc."
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
           </div>
         </div>
@@ -530,12 +499,10 @@ const Profile: React.FC = () => {
               onChange={(e) => handleInputChange('officeAddress', 'streetNumber', e.target.value)}
               disabled={!isEditing}
               placeholder="456"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
           </div>
-          
+
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">Street Name</label>
             <input
@@ -544,9 +511,7 @@ const Profile: React.FC = () => {
               onChange={(e) => handleInputChange('officeAddress', 'street', e.target.value)}
               disabled={!isEditing}
               placeholder="Business Boulevard"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
           </div>
         </div>
@@ -560,9 +525,7 @@ const Profile: React.FC = () => {
               onChange={(e) => handleInputChange('officeAddress', 'floor', e.target.value)}
               disabled={!isEditing}
               placeholder="12th"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
           </div>
 
@@ -574,9 +537,7 @@ const Profile: React.FC = () => {
               onChange={(e) => handleInputChange('officeAddress', 'suite', e.target.value)}
               disabled={!isEditing}
               placeholder="Suite 1200"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
           </div>
 
@@ -588,9 +549,7 @@ const Profile: React.FC = () => {
               onChange={(e) => handleInputChange('officeAddress', 'city', e.target.value)}
               disabled={!isEditing}
               placeholder="New York"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
           </div>
 
@@ -602,9 +561,7 @@ const Profile: React.FC = () => {
               onChange={(e) => handleInputChange('officeAddress', 'state', e.target.value)}
               disabled={!isEditing}
               placeholder="NY"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
           </div>
 
@@ -616,9 +573,7 @@ const Profile: React.FC = () => {
               onChange={(e) => handleInputChange('officeAddress', 'postalCode', e.target.value)}
               disabled={!isEditing}
               placeholder="10001"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
           </div>
         </div>
@@ -641,7 +596,7 @@ const Profile: React.FC = () => {
           <Phone className="w-5 h-5 text-gray-600" />
           <h4 className="text-md font-semibold text-gray-900">Emergency Contact</h4>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
@@ -651,9 +606,7 @@ const Profile: React.FC = () => {
               onChange={(e) => handleInputChange('emergencyContact', 'name', e.target.value)}
               disabled={!isEditing}
               placeholder="Emergency Contact Name"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
           </div>
 
@@ -663,9 +616,7 @@ const Profile: React.FC = () => {
               value={formData.emergencyContact.relationship}
               onChange={(e) => handleInputChange('emergencyContact', 'relationship', e.target.value)}
               disabled={!isEditing}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             >
               <option value="">Select relationship</option>
               <option value="Spouse">Spouse</option>
@@ -685,9 +636,7 @@ const Profile: React.FC = () => {
               onChange={(e) => handleInputChange('emergencyContact', 'phoneNumber', e.target.value)}
               disabled={!isEditing}
               placeholder="+1 (555) 123-4567"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
           </div>
 
@@ -699,9 +648,7 @@ const Profile: React.FC = () => {
               onChange={(e) => handleInputChange('emergencyContact', 'email', e.target.value)}
               disabled={!isEditing}
               placeholder="emergency@example.com"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditing ? 'border-gray-300' : 'border-gray-200 bg-gray-50'}`}
             />
           </div>
         </div>
@@ -763,7 +710,7 @@ const Profile: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <div className="flex items-center space-x-3">
             <Shield className="w-5 h-5 text-orange-600" />
@@ -790,7 +737,7 @@ const Profile: React.FC = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -866,13 +813,9 @@ const Profile: React.FC = () => {
                       ...prev,
                       [setting.key]: !prev[setting.key as keyof typeof prev]
                     }))}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full ${
-                      notificationSettings[setting.key as keyof typeof notificationSettings] ? 'bg-blue-600' : 'bg-gray-200'
-                    }`}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full ${notificationSettings[setting.key as keyof typeof notificationSettings] ? 'bg-blue-600' : 'bg-gray-200'}`}
                   >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-                      notificationSettings[setting.key as keyof typeof notificationSettings] ? 'translate-x-6' : 'translate-x-1'
-                    }`} />
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${notificationSettings[setting.key as keyof typeof notificationSettings] ? 'translate-x-6' : 'translate-x-1'}`} />
                   </button>
                 </div>
               </div>
@@ -937,11 +880,7 @@ const Profile: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                    activeTab === tab.id
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
+                  className={`flex-1 flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors ${activeTab === tab.id ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
                 >
                   <IconComponent className="w-4 h-4" />
                   <span className="font-medium">{tab.label}</span>
@@ -958,14 +897,12 @@ const Profile: React.FC = () => {
           {activeTab === 'notifications' && renderNotifications()}
           {activeTab === 'preferences' && renderPreferences()}
         </div>
-      </div>
 
-      {/* Security Settings Modal */}
-      {showSecuritySettings && (
-        <SecuritySettings
-          onClose={() => setShowSecuritySettings(false)}
-        />
-      )}
+        {/* Security Settings Modal */}
+        {showSecuritySettings && (
+          <SecuritySettings onClose={() => setShowSecuritySettings(false)} />
+        )}
+      </div>
     </DashboardLayout>
   );
 };

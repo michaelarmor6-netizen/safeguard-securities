@@ -49,8 +49,8 @@ export default function InvestorAdminCrmCampaignsPage() {
     if (!slug) return;
     setBusy(true);
     try {
-      const id = await createCampaignFromInstrument(slug, user?.uid ?? '');
-      await logAction(user?.uid ?? '', user?.email ?? '', 'crm.campaign.create', `${slug} campaign ${id}`);
+      const id = await createCampaignFromInstrument(slug, user?.id ?? '');
+      await logAction(user?.id ?? '', user?.email ?? '', 'crm.campaign.create', `${slug} campaign ${id}`);
       load();
       await open(id);
       toast.success('Campaign created as a draft — review every email, then activate.');
@@ -69,7 +69,7 @@ export default function InvestorAdminCrmCampaignsPage() {
         `Activate "${c.name}"?\n\nThe send worker will start emailing ${c.stats.enrolled} enrolled lead(s) on its next run. Make sure the Resend domain is verified and functions-crm is deployed - until then nothing sends, but once both are live this switch is real.`)) return;
     }
     await updateCampaign(c.id, { status });
-    await logAction(user?.uid ?? '', user?.email ?? '', 'crm.campaign.status', `${c.id} -> ${status}`);
+    await logAction(user?.id ?? '', user?.email ?? '', 'crm.campaign.status', `${c.id} -> ${status}`);
     load(); open(c.id);
   };
 

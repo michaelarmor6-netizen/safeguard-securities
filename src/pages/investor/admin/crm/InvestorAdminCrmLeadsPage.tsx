@@ -64,7 +64,7 @@ export default function InvestorAdminCrmLeadsPage() {
       downloadCsv(csv, `safeguard-vicidial-${stamp}.csv`);
       await markExported(included.map((l) => l.id));
       // A CSV of PII leaving the system must always answer who/when/what.
-      await logAction(user?.uid ?? '', user?.email ?? '', 'crm.export.vicidial',
+      await logAction(user?.id ?? '', user?.email ?? '', 'crm.export.vicidial',
         `${included.length} leads exported (${skippedNoPhone} skipped without phone), list_id="${listId.trim()}"`);
       toast.success(`Exported ${included.length} leads${skippedNoPhone ? ` - ${skippedNoPhone} skipped (no phone)` : ''}`);
       load();
@@ -86,7 +86,7 @@ export default function InvestorAdminCrmLeadsPage() {
         if (lead.email) await addSuppression({ type: 'email', value: lead.email, reason: 'manual', source: 'admin' });
         await updateLead(lead.id, { status: 'dead' });
       }
-      await logAction(user?.uid ?? '', user?.email ?? '', 'crm.suppress', `${chosen.length} leads suppressed manually`);
+      await logAction(user?.id ?? '', user?.email ?? '', 'crm.suppress', `${chosen.length} leads suppressed manually`);
       toast.success(`${chosen.length} suppressed`);
       setSelected(new Set());
       load();
@@ -104,7 +104,7 @@ export default function InvestorAdminCrmLeadsPage() {
     setBusy(true);
     try {
       for (const id of chosen) await deleteLead(id);
-      await logAction(user?.uid ?? '', user?.email ?? '', 'crm.delete', `${chosen.length} leads deleted`);
+      await logAction(user?.id ?? '', user?.email ?? '', 'crm.delete', `${chosen.length} leads deleted`);
       setSelected(new Set());
       load();
     } catch (e) {
@@ -125,7 +125,7 @@ export default function InvestorAdminCrmLeadsPage() {
     setBusy(true);
     try {
       const r = await enrollLeads(campaign, chosen);
-      await logAction(user?.uid ?? '', user?.email ?? '', 'crm.campaign.enroll',
+      await logAction(user?.id ?? '', user?.email ?? '', 'crm.campaign.enroll',
         `${r.enrolled} into ${campaign.name} (${r.skippedNoEmail} no email, ${r.skippedSuppressed} suppressed, ${r.alreadyEnrolled} already in)`);
       toast.success(`${r.enrolled} enrolled — ${r.skippedNoEmail} had no email, ${r.skippedSuppressed} suppressed, ${r.alreadyEnrolled} already enrolled`);
       setSelected(new Set());

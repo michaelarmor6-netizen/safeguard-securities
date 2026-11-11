@@ -19,16 +19,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import QuickActionsModal from '../../components/modals/QuickActionsModal';
-import { db } from '../../config/firebase';
-import { 
-  collection, 
-  query, 
-  orderBy, 
-  onSnapshot, 
-  doc, 
-  updateDoc,
-  Timestamp 
-} from 'firebase/firestore';
+import { supabase, nowISO } from '../../config/supabase';
 import toast from 'react-hot-toast';
 
 interface SupportRequest {
@@ -62,29 +53,44 @@ const ManageSupportRequests: React.FC = () => {
 
   useEffect(() => {
     // Real-time listener for support requests
-    const q = query(
-      collection(db, 'support_requests'),
-      orderBy('timestamp', 'desc')
-    );
+    const channel = supabase
+      .channel('support-requests-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'support_requests',
+        },
+        () => {
+          loadRequests();
+        },
+      )
+      .subscribe();
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const requestsData: SupportRequest[] = [];
-      snapshot.forEach((doc) => {
-        requestsData.push({
-          id: doc.id,
-          ...doc.data()
-        } as SupportRequest);
-      });
-      setRequests(requestsData);
-      setLoading(false);
-    }, (error) => {
+    loadRequests();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const loadRequests = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('support_requests')
+        .select('*')
+        .order('timestamp', { ascending: false });
+      if (error) throw error;
+      setRequests((data ?? []) as SupportRequest[]);
+    } catch (error) {
       console.error('Error fetching support requests:', error);
       setLoading(false);
       toast.error('Failed to load support requests');
-    });
-
-    return () => unsubscribe();
-  }, []);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const openQuickActions = (request: SupportRequest) => {
     setQuickActionsRequest(request);
@@ -99,10 +105,10 @@ const ManageSupportRequests: React.FC = () => {
 
   const handleStatusUpdate = async (requestId: string, newStatus: string) => {
     try {
-      await updateDoc(doc(db, 'support_requests', requestId), {
+      await supabase.from('support_requests').update({
         status: newStatus,
-        updatedAt: new Date().toISOString()
-      });
+        updated_at: nowISO()
+      }).eq('id', requestId);
       toast.success('Status updated successfully');
     } catch (error) {
       toast.error('Failed to update status');

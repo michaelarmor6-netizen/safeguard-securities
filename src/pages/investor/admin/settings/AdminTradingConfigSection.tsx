@@ -129,7 +129,7 @@ export default function AdminTradingConfigSection() {
   const toggleStatus = async (asset: Asset) => {
     try {
       await setAssetTradable(asset.id, !asset.isTradable);
-      if (user) logAction(user.uid, profile?.email ?? '', 'Instrument status toggled', `${asset.symbol}: ${!asset.isTradable ? 'Active' : 'Inactive'}`);
+      if (user) logAction(user.id, profile?.email ?? '', 'Instrument status toggled', `${asset.symbol}: ${!asset.isTradable ? 'Active' : 'Inactive'}`);
       setAssets((prev) => prev.map((a) => (a.id === asset.id ? { ...a, isTradable: !a.isTradable } : a)));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to update instrument');
@@ -161,7 +161,7 @@ export default function AdminTradingConfigSection() {
         isTradable: form.active,
         isActive: true,
       });
-      if (user) logAction(user.uid, profile?.email ?? '', 'Instrument added', `${id} (${TYPE_LABEL.get(form.type as AssetClass) ?? form.type})`);
+      if (user) logAction(user.id, profile?.email ?? '', 'Instrument added', `${id} (${TYPE_LABEL.get(form.type as AssetClass) ?? form.type})`);
       toast.success(`${id} added`);
       setForm(emptyForm);
       setShowAddForm(false);

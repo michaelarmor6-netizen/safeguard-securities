@@ -4,6 +4,7 @@ import { User, Lock, Eye, EyeOff, ArrowLeft, Shield } from 'lucide-react';
 import LogoDisplay from '../../components/ui/LogoDisplay';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSystemConfigContext } from '../../contexts/SystemConfigContext';
+import { supabase } from '../../config/supabase';
 import toast from 'react-hot-toast';
 import PasswordResetRequestModal from '../../components/modals/PasswordResetRequestModal';
 
@@ -35,180 +36,111 @@ const ClientLoginPage: React.FC = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.username || !formData.password) {
       toast.error('Please enter both username and password');
       return;
     }
 
     setIsLoading(true);
-    
+
     try {
-      // Import Firebase functions for user lookup
-      const { collection, query, where, getDocs } = await import('firebase/firestore');
-      const { db } = await import('../../config/firebase');
-      
-      // Check if input is already an email or username
+      // Look up the user by username/email in Supabase
       let userEmail = formData.username;
-      
+
       if (!formData.username.includes('@')) {
-        // It's a username, we need to look up the email
+        // It's a username, look up the email
         console.log('Looking up email for username:', formData.username);
-        
+
         try {
-          const usersQuery = query(
-            collection(db, 'users'),
-            where('username', '==', formData.username)
-          );
-          
-          const querySnapshot = await getDocs(usersQuery);
-          
-          if (querySnapshot.empty) {
+          const { data: users, error } = await supabase
+            .from('users')
+            .select('email')
+            .eq('username', formData.username)
+            .maybeSingle();
+
+          if (error) throw error;
+
+          if (!users) {
             toast.error('Username not found. Please contact bank support.');
             return;
           }
-          
-          // Get the email from the user document
-          const userDoc = querySnapshot.docs[0];
-          const userData = userDoc.data();
-          userEmail = userData.email;
-          
+
+          userEmail = users.email;
           console.log('Found user email for username:', userEmail);
-        } catch (dbError) {
-          console.error('Database lookup failed, trying direct email login:', dbError);
-          // If database lookup fails due to permissions, try using username as email
-          // This is a fallback for when users enter their email directly
-          userEmail = formData.username.includes('@') ? formData.username : `${formData.username}@tempmail.com`;
-        }
-      }
-      
-      // Check if this is a temporary password first (for manual resets)
-      if (!formData.username.includes('@')) {
-        const usersQuery = query(
-          collection(db, 'users'),
-          where('username', '==', formData.username)
-        );
-        const querySnapshot = await getDocs(usersQuery);
-        
-        if (!querySnapshot.empty) {
-          const userDoc = querySnapshot.docs[0];
-          const userData = userDoc.data();
-          
-          // ONLY redirect to change password if:
-          // 1. User has a temporary password AND it matches the input
-          // 2. The temporary password is different from their regular password
-          // 3. The mustChangePassword flag is explicitly set to true
-          if (userData.temporaryPassword && 
-              userData.temporaryPassword === formData.password &&
-              userData.mustChangePassword === true) {
+
+          // Check for temporary password login
+          const { data: userData } = await supabase
+            .from('users')
+            .select('temporary_password, must_change_password, email')
+            .eq('username', formData.username)
+            .maybeSingle();
+
+          if (userData &&
+            userData.temporary_password &&
+            userData.temporary_password === formData.password &&
+            userData.must_change_password === true) {
             console.log('Temporary password login detected - redirecting to change password');
-            
-            // For temporary password, use the email with the temporary password for authentication
-            // This is a special case where we allow temporary login
+
             try {
-              await signIn(userData.email, formData.password);
-              
-              // If successful, redirect to change password
+              await signIn(userEmail, formData.password);
+
               toast.success('Temporary password accepted! You must change your password now.');
-              navigate('/change-password', { 
-                state: { 
-                  isTemporary: true, 
-                  email: userData.email,
+              navigate('/change-password', {
+                state: {
+                  isTemporary: true,
+                  email: userEmail,
                   username: formData.username
-                } 
+                }
               });
               return;
             } catch (authError: any) {
-              // If temporary password doesn't work with Firebase, we need to handle this differently
-              if (authError?.code === 'auth/wrong-password' || authError?.code === 'auth/invalid-credential') {
-                // Create a special session indicator
-                console.log('Using temporary password bypass for user:', userData.email);
-                
-                // Store temporary login state
+              if (authError?.message?.includes('wrong-password') || authError?.message?.includes('invalid-credential')) {
                 sessionStorage.setItem('tempPasswordUser', JSON.stringify({
-                  email: userData.email,
+                  email: userEmail,
                   username: formData.username,
                   mustChangePassword: true
                 }));
-                
+
                 toast.success('Temporary password accepted! You must change your password now.');
-                navigate('/change-password', { 
-                  state: { 
-                    isTemporary: true, 
-                    email: userData.email,
+                navigate('/change-password', {
+                  state: {
+                    isTemporary: true,
+                    email: userEmail,
                     username: formData.username
-                  } 
+                  }
                 });
                 return;
               }
               throw authError;
             }
           }
+        } catch (dbError) {
+          console.error('Database lookup failed, trying direct email login:', dbError);
+          userEmail = formData.username.includes('@') ? formData.username : `${formData.username}@tempmail.com`;
         }
       }
-      
+
       // Normal login process
       console.log('Attempting normal login with email:', userEmail);
       await signIn(userEmail, formData.password);
       console.log('Normal login successful');
-      
-      // Check if user must change password (ONLY for confirmed temporary passwords)
-      try {
-        if (!formData.username.includes('@')) {
-          // We already have the user document from username lookup
-          const usersQuery = query(
-            collection(db, 'users'),
-            where('username', '==', formData.username)
-          );
-          const querySnapshot = await getDocs(usersQuery);
-          
-          if (!querySnapshot.empty) {
-            const userDoc = querySnapshot.docs[0];
-            const userData = userDoc.data();
-            
-            // Debug user data
-            console.log('User data check:', {
-              mustChangePassword: userData?.mustChangePassword,
-              hasTemporaryPassword: !!userData?.temporaryPassword,
-              username: formData.username
-            });
-            
-            // ONLY redirect if mustChangePassword is explicitly true AND there's a temporary password
-            if (userData?.mustChangePassword === true && userData?.temporaryPassword) {
-              console.log('User has mustChangePassword flag and temporary password - redirecting');
-              toast.success('Login successful! You must change your temporary password.');
-              navigate('/change-password', { 
-                state: { 
-                  isTemporary: true, 
-                  email: userEmail,
-                  username: formData.username
-                } 
-              });
-              return;
-            } else {
-              console.log('User does not need to change password - proceeding to dashboard');
-            }
-          }
-        }
-      } catch (checkError) {
-        console.log('Could not check mustChangePassword flag:', checkError);
-      }
-      
+
       toast.success('Welcome back!');
       navigate('/dashboard');
     } catch (error: any) {
       console.error('Client login error:', error);
-      
+
       let errorMessage = 'Login failed. Please check your credentials.';
-      
-      if (error?.code === 'auth/user-not-found') {
+
+      if (error?.message?.includes('user-not-found')) {
         errorMessage = 'Account not found. Please contact bank administration.';
-      } else if (error?.code === 'auth/wrong-password') {
+      } else if (error?.message?.includes('wrong-password')) {
         errorMessage = 'Incorrect password. Please try again.';
-      } else if (error?.code === 'auth/invalid-credential') {
+      } else if (error?.message?.includes('invalid-credential')) {
         errorMessage = 'Invalid credentials. Please contact bank support.';
       }
-      
+
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -222,15 +154,15 @@ const ClientLoginPage: React.FC = () => {
           {/* Enhanced Logo - Full Header Coverage */}
           <div className="flex justify-center mb-8">
             <div className="w-full max-w-xs">
-              <LogoDisplay 
-                logoUrl={getPrimaryLogo()} 
+              <LogoDisplay
+                logoUrl={getPrimaryLogo()}
                 companyName=""
                 fallbackIcon={<User className="w-12 h-12 text-green-600" />}
                 className="w-full h-24 object-contain"
               />
             </div>
           </div>
-          
+
           {/* Header */}
           <div className="text-center">
             <h2 className="text-3xl font-bold text-gray-900">Client Login</h2>
@@ -242,7 +174,7 @@ const ClientLoginPage: React.FC = () => {
 
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
           <div className="bg-white py-8 px-4 shadow-xl rounded-lg sm:px-10 border border-gray-200">
-            
+
             {/* Important Notice */}
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-start">
@@ -250,7 +182,7 @@ const ClientLoginPage: React.FC = () => {
                 <div>
                   <h3 className="text-sm font-medium text-blue-800">Account Access</h3>
                   <p className="text-xs text-blue-700 mt-1">
-                    Use the username and password provided by bank administration. 
+                    Use the username and password provided by bank administration.
                     If you don't have credentials, please contact our support team.
                   </p>
                 </div>
@@ -374,13 +306,13 @@ const ClientLoginPage: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Password Reset Request Modal */}
-      <PasswordResetRequestModal 
-        isOpen={showResetModal}
-        onClose={() => setShowResetModal(false)}
-      />
+        {/* Password Reset Request Modal */}
+        <PasswordResetRequestModal
+          isOpen={showResetModal}
+          onClose={() => setShowResetModal(false)}
+        />
+      </div>
     </div>
   );
 };

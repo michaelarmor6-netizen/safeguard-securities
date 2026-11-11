@@ -2,11 +2,7 @@
 // enrolls leads; the ONLY thing that ever sends an email is the scheduled
 // worker in functions-crm. The console cannot send - the same separation
 // that keeps origination out of the dialer's web console.
-import {
-  collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp,
-  setDoc, updateDoc, where, writeBatch, type DocumentData,
-} from 'firebase/firestore';
-import { db } from '../../../config/firebase';
+import { supabase, nowISO } from '../../../config/supabase';
 import { LIVE_COLLECTIONS } from '../../../config/liveCollections';
 import { buildTrack, trackLabel } from './crmFunnelTemplates';
 import { findSuppressed } from './crmSuppressionService';
@@ -18,12 +14,12 @@ import {
 } from './crmCampaignTypes';
 import type { FunnelStage } from './crmInstrumentTypes';
 
-function mapCampaign(id: string, d: DocumentData): CrmCampaign {
+function mapCampaign(id: string, d: any): CrmCampaign {
   return {
     id,
     name: d.name ?? '',
-    track: (d.instrumentSlug ?? d.track ?? 'gold') as CampaignTrack,
-    instrumentSlug: d.instrumentSlug ?? d.track ?? 'gold',
+    track: (d.instrument_slug ?? d.track ?? 'gold') as CampaignTrack,
+    instrumentSlug: d.instrument_slug ?? d.track ?? 'gold',
     status: (d.status ?? 'draft') as CampaignStatus,
     steps: Array.isArray(d.steps) ? d.steps : [],
     settings: d.settings ?? {
@@ -31,37 +27,42 @@ function mapCampaign(id: string, d: DocumentData): CrmCampaign {
       companyName: 'SafeGuard Securities', companyAddress: '',
     },
     stats: { ...EMPTY_STATS, ...(d.stats ?? {}) },
-    createdBy: d.createdBy,
-    createdAt: d.createdAt?.toDate?.(),
-    updatedAt: d.updatedAt?.toDate?.(),
+    createdBy: d.created_by ?? d.createdBy,
+    createdAt: d.created_at ? new Date(d.created_at) : undefined,
+    updatedAt: d.updated_at ? new Date(d.updated_at) : undefined,
   };
 }
 
-function mapEnrollment(id: string, d: DocumentData): CrmEnrollment {
+function mapEnrollment(id: string, d: any): CrmEnrollment {
   return {
     id,
-    campaignId: d.campaignId ?? '',
-    leadId: d.leadId ?? '',
+    campaignId: d.campaign_id ?? d.campaignId ?? '',
+    leadId: d.lead_id ?? d.leadId ?? '',
     email: d.email ?? '',
-    firstName: d.firstName ?? '',
+    firstName: d.first_name ?? d.firstName ?? '',
     step: d.step ?? 0,
-    nextSendAt: d.nextSendAt?.toDate?.() ?? new Date(0),
+    nextSendAt: d.next_send_at ? new Date(d.next_send_at) : new Date(0),
     status: d.status ?? 'active',
-    lastError: d.lastError,
-    enrolledAt: d.enrolledAt?.toDate?.(),
-    lastSentAt: d.lastSentAt?.toDate?.(),
-    funnelStage: d.funnelStage,
+    lastError: d.last_error ?? d.lastError,
+    enrolledAt: d.enrolled_at ? new Date(d.enrolled_at) : undefined,
+    lastSentAt: d.last_sent_at ? new Date(d.last_sent_at) : undefined,
+    funnelStage: d.funnel_stage ?? d.funnelStage,
   };
 }
 
 export async function listCampaigns(): Promise<CrmCampaign[]> {
-  const snap = await getDocs(query(collection(db, LIVE_COLLECTIONS.crmCampaigns), orderBy('createdAt', 'desc')));
-  return snap.docs.map((d) => mapCampaign(d.id, d.data()));
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.crmCampaigns)
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error || !data) return [];
+  return data.map((d) => mapCampaign(d.id!, d));
 }
 
 export async function getCampaign(id: string): Promise<CrmCampaign | null> {
-  const snap = await getDoc(doc(db, LIVE_COLLECTIONS.crmCampaigns, id));
-  return snap.exists() ? mapCampaign(snap.id, snap.data()) : null;
+  const { data, error } = await supabase.from(LIVE_COLLECTIONS.crmCampaigns).select('*').eq('id', id).maybeSingle();
+  if (error || !data) return null;
+  return mapCampaign(data.id!, data);
 }
 
 export async function createCampaignFromTrack(
@@ -88,27 +89,27 @@ export async function createCampaignFromInstrument(
     companyAddress: '',
     ...settings,
   };
-  const ref = doc(collection(db, LIVE_COLLECTIONS.crmCampaigns));
-  await setDoc(ref, {
+  const { data } = await supabase.from(LIVE_COLLECTIONS.crmCampaigns).insert({
     name: `${name} — ${new Date().toLocaleDateString()}`,
     track: slug,
-    instrumentSlug: slug,
+    instrument_slug: slug,
     status: 'draft',
     steps,
     settings: merged,
     stats: EMPTY_STATS,
-    createdBy,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-  return ref.id;
+    created_by: createdBy,
+    created_at: nowISO(),
+    updated_at: nowISO(),
+  }).select('id').single();
+  if (!data) throw new Error('Failed to create campaign');
+  return data.id!;
 }
 
 export async function updateCampaign(
   id: string,
   patch: Partial<Pick<CrmCampaign, 'name' | 'status' | 'steps' | 'settings'>>,
 ): Promise<void> {
-  await updateDoc(doc(db, LIVE_COLLECTIONS.crmCampaigns, id), { ...patch, updatedAt: serverTimestamp() });
+  await supabase.from(LIVE_COLLECTIONS.crmCampaigns).update({ ...patch, updated_at: nowISO() }).eq('id', id);
 }
 
 export interface EnrollResult { enrolled: number; skippedNoEmail: number; skippedSuppressed: number; alreadyEnrolled: number; }
@@ -125,59 +126,58 @@ export async function enrollLeads(campaign: CrmCampaign, leads: CrmLead[]): Prom
   });
   const suppressed = await findSuppressed(withEmail.map((l) => l.email!));
 
-  // read existing enrollment ids in chunks (documentId 'in' also caps at 30,
-  // so just getDoc them in parallel batches - counts here are hundreds, not GI-scale)
+  // read existing enrollment ids - document id is `${campaignId}_${leadId}`
   const candidates = withEmail.filter((l) => {
     if (suppressed.has(l.email!)) { result.skippedSuppressed++; return false; }
     return true;
   });
-  const existing = await Promise.all(candidates.map((l) =>
-    getDoc(doc(db, LIVE_COLLECTIONS.crmEnrollments, `${campaign.id}_${l.id}`))));
+  const existingIds = await Promise.all(candidates.map((l) =>
+    supabase.from(LIVE_COLLECTIONS.crmEnrollments).select('id').eq('id', `${campaign.id!}_${l.id!}`).maybeSingle()));
 
   const batchable = candidates.filter((_, i) => {
-    if (existing[i].exists()) { result.alreadyEnrolled++; return false; }
+    if (existingIds[i]?.data) { result.alreadyEnrolled++; return false; }
     return true;
   });
 
   for (let i = 0; i < batchable.length; i += 450) {
-    const batch = writeBatch(db);
-    for (const lead of batchable.slice(i, i + 450)) {
-      batch.set(doc(db, LIVE_COLLECTIONS.crmEnrollments, `${campaign.id}_${lead.id}`), {
-        campaignId: campaign.id,
-        leadId: lead.id,
+    await supabase.from(LIVE_COLLECTIONS.crmEnrollments).insert(
+      batchable.slice(i, i + 450).map((lead) => ({
+        id: `${campaign.id!}_${lead.id!}`,
+        campaign_id: campaign.id!,
+        lead_id: lead.id!,
         email: lead.email,
-        firstName: lead.firstName || 'there',
+        first_name: lead.firstName || 'there',
         step: 0,
-        nextSendAt: new Date(),      // step 0 goes out on the worker's next tick
+        next_send_at: nowISO(), // step 0 goes out on the worker's next tick
         status: 'active',
-        funnelStage: 'sequenced' as FunnelStage,
-        enrolledAt: serverTimestamp(),
-      });
-    }
-    await batch.commit();
+        funnel_stage: 'sequenced' as FunnelStage,
+        enrolled_at: nowISO(),
+      })),
+    );
     result.enrolled += Math.min(450, batchable.length - i);
   }
 
   if (result.enrolled > 0) {
-    await updateDoc(doc(db, LIVE_COLLECTIONS.crmCampaigns, campaign.id), {
-      'stats.enrolled': (campaign.stats.enrolled ?? 0) + result.enrolled,
-      updatedAt: serverTimestamp(),
-    });
+    await supabase.from(LIVE_COLLECTIONS.crmCampaigns).update({
+      stats: { ...campaign.stats, enrolled: (campaign.stats.enrolled ?? 0) + result.enrolled },
+      updated_at: nowISO(),
+    }).eq('id', campaign.id!);
   }
   return result;
 }
 
 export async function setEnrollmentStage(enrollmentId: string, funnelStage: FunnelStage): Promise<void> {
-  const patch: Record<string, unknown> = { funnelStage };
+  const patch: Record<string, unknown> = { funnel_stage: funnelStage };
   if (funnelStage === 'converted') patch.status = 'completed';
   if (funnelStage === 'exited') patch.status = 'unsubscribed';
-  await updateDoc(doc(db, LIVE_COLLECTIONS.crmEnrollments, enrollmentId), patch);
+  await supabase.from(LIVE_COLLECTIONS.crmEnrollments).update(patch).eq('id', enrollmentId);
 }
 
 export async function listEnrollments(campaignId: string): Promise<CrmEnrollment[]> {
-  const snap = await getDocs(query(
-    collection(db, LIVE_COLLECTIONS.crmEnrollments),
-    where('campaignId', '==', campaignId),
-  ));
-  return snap.docs.map((d) => mapEnrollment(d.id, d.data()));
+  const { data, error } = await supabase
+    .from(LIVE_COLLECTIONS.crmEnrollments)
+    .select('*')
+    .eq('campaign_id', campaignId);
+  if (error || !data) return [];
+  return data.map((d) => mapEnrollment(d.id!, d));
 }

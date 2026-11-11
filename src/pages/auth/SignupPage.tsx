@@ -96,7 +96,7 @@ const SignupPage: React.FC = () => {
 
     try {
       setLoading(true);
-      await signUp(formData);
+      await signUp(formData.email, formData.password, formData.firstName, formData.lastName);
     } catch (error) {
       console.error('Signup error:', error);
     } finally {

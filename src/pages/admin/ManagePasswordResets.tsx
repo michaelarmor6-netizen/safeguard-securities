@@ -9,16 +9,7 @@ import {
   PasswordResetRequest 
 } from '../../services/PasswordResetService';
 import { PasswordGenerator } from '../../utils/passwordGenerator';
-import { 
-  doc, 
-  updateDoc, 
-  serverTimestamp,
-  collection,
-  query,
-  where,
-  getDocs
-} from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase, nowISO } from '../../config/supabase';
 import toast from 'react-hot-toast';
 import PasswordResetApprovalModal from '../../components/modals/PasswordResetApprovalModal';
 import { 
@@ -102,40 +93,35 @@ const ManagePasswordResets: React.FC = () => {
       console.log('Generated temporary password for user:', selectedRequest.username);
 
       // Find the user document by username first, then update it
-      const usersQuery = query(
-        collection(db, 'users'),
-        where('username', '==', selectedRequest.username)
-      );
-      
-      const userSnapshot = await getDocs(usersQuery);
-      if (userSnapshot.empty) {
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', selectedRequest.username);
+      if (usersError) throw usersError;
+      if (!users || users.length === 0) {
         throw new Error(`User with username ${selectedRequest.username} not found`);
       }
       
       // Update the user document with the correct document ID
-      const userDoc = userSnapshot.docs[0];
+      const userDoc = users[0];
       console.log('Found user document with ID:', userDoc.id);
-      
-      const userRef = doc(db, 'users', userDoc.id);
-      const userData = userDoc.data();
+      const userData = userDoc;
       
       if (method === 'email') {
-        // Method 1: Send Firebase password reset email
-        const { sendPasswordResetEmail } = await import('firebase/auth');
-        const { auth } = await import('../../config/firebase');
-        
+        // Method 1: Send password reset email
         console.log('Sending password reset email to:', userData.email);
-        await sendPasswordResetEmail(auth, userData.email);
+        const { error: resetErr } = await supabase.auth.resetPasswordForEmail(userData.email);
+        if (resetErr) throw resetErr;
         
         // Update user document to track email method
-        await updateDoc(userRef, {
-          mustChangePassword: true,
-          passwordResetBy: currentUser.email,
-          passwordResetAt: serverTimestamp(),
-          passwordResetRequestId: selectedRequest.requestId,
-          passwordResetEmailSent: true,
-          passwordResetMethod: 'email'
-        });
+        await supabase.from('users').update({
+          must_change_password: true,
+          password_reset_by: currentUser.email,
+          password_reset_at: nowISO(),
+          password_reset_request_id: selectedRequest.requestId,
+          password_reset_email_sent: true,
+          password_reset_method: 'email'
+        }).eq('id', userDoc.id);
         
         console.log('Password reset email sent and user document updated');
         
@@ -144,15 +130,15 @@ const ManagePasswordResets: React.FC = () => {
         console.log('Processing manual password reset for:', userData.email);
         
         // Update user document with temporary password information
-        await updateDoc(userRef, {
-          mustChangePassword: true,
-          passwordResetBy: currentUser.email,
-          passwordResetAt: serverTimestamp(),
-          passwordResetRequestId: selectedRequest.requestId,
-          temporaryPassword: newTempPassword,
-          passwordResetMethod: 'manual',
-          adminMustCommunicatePassword: true
-        });
+        await supabase.from('users').update({
+          must_change_password: true,
+          password_reset_by: currentUser.email,
+          password_reset_at: nowISO(),
+          password_reset_request_id: selectedRequest.requestId,
+          temporary_password: newTempPassword,
+          password_reset_method: 'manual',
+          admin_must_communicate_password: true
+        }).eq('id', userDoc.id);
         
         console.log('Manual password reset processed - Admin must communicate password to user');
       }

@@ -41,7 +41,7 @@ export default function InvestorKycPage() {
   const load = () => {
     if (!user) return;
     setLoading(true);
-    getKycDocumentsForUser(user.uid)
+    getKycDocumentsForUser(user.id)
       .then(setDocs)
       .catch((e) => toast.error(e instanceof Error ? e.message : 'Failed to load documents'))
       .finally(() => setLoading(false));
@@ -92,7 +92,7 @@ export default function InvestorKycPage() {
     try {
       setProgress(70);
       await uploadIdentityDocument({
-        userId: user.uid,
+        userId: user.id,
         userEmail: profile?.email ?? user.email ?? '',
         clientName,
         docType,

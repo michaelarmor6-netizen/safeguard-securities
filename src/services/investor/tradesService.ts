@@ -1,5 +1,4 @@
-import { collection, getDocs, orderBy, query, where, type DocumentData } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 import { LIVE_COLLECTIONS } from '../../config/liveCollections';
 import { getAllOrders, getOrdersForUser, type InvestorOrder } from './orderService';
 
@@ -37,7 +36,7 @@ export function tradeCreditDebit(t: Pick<Trade, 'side' | 'grossAmount' | 'fees' 
   return t.side === 'buy' ? -(t.grossAmount + t.fees + t.commission) : t.grossAmount - t.fees - t.commission;
 }
 
-function mapTrade(id: string, data: DocumentData): Trade {
+function mapTrade(id: string, data: any): Trade {
   return {
     id,
     tradeRef: data.tradeRef ?? '',
@@ -54,7 +53,7 @@ function mapTrade(id: string, data: DocumentData): Trade {
     fees: Number(data.fees ?? 0),
     commission: Number(data.commission ?? 0),
     currency: data.currency ?? 'USD',
-    executedAt: data.executedAt?.toDate?.(),
+    executedAt: data.executedAt ? new Date(data.executedAt) : undefined,
     remarks: data.remarks ?? 'OPEN',
     clientStatus: data.clientStatus,
     optionType: data.optionType ?? undefined,
@@ -87,25 +86,30 @@ function applyDeskTerms(trades: Trade[], orders: InvestorOrder[]): Trade[] {
 }
 
 export async function getTradesForUser(userId: string): Promise<Trade[]> {
-  const [snap, orders] = await Promise.all([
-    getDocs(query(collection(db, LIVE_COLLECTIONS.trades), where('userId', '==', userId), orderBy('executedAt', 'desc'))),
+  const [tradesResp, orders] = await Promise.all([
+    supabase
+      .from(LIVE_COLLECTIONS.trades)
+      .select('*')
+      .eq('user_id', userId)
+      .order('executed_at', { ascending: false }),
     getOrdersForUser(userId).catch(() => [] as InvestorOrder[]),
   ]);
-  return applyDeskTerms(snap.docs.map((d) => mapTrade(d.id, d.data())), orders);
+  const trades = tradesResp.data ?? [];
+  return applyDeskTerms(trades.map((d) => mapTrade(d.id, d)), orders);
 }
 
 export async function getTradesForOrder(orderId: string): Promise<Trade[]> {
-  const snap = await getDocs(query(collection(db, LIVE_COLLECTIONS.trades), where('orderId', '==', orderId)));
-  return snap.docs.map((d) => mapTrade(d.id, d.data()));
+  const { data } = await supabase.from(LIVE_COLLECTIONS.trades).select('*').eq('order_id', orderId);
+  return (data ?? []).map((d) => mapTrade(d.id, d));
 }
 
-// Admin-only (firestore.rules restricts trades reads to owner-or-admin, so
-// this only actually returns data when called by an admin session) - powers
-// the Executed Trades ledger.
+// Admin-only (RLS restricts trades reads to owner-or-admin, so this only
+// actually returns data when called by an admin session) - powers the
+// Executed Trades ledger.
 export async function getAllTrades(): Promise<Trade[]> {
-  const [snap, orders] = await Promise.all([
-    getDocs(query(collection(db, LIVE_COLLECTIONS.trades), orderBy('executedAt', 'desc'))),
+  const [tradesResp, orders] = await Promise.all([
+    supabase.from(LIVE_COLLECTIONS.trades).select('*').order('executed_at', { ascending: false }),
     getAllOrders().catch(() => [] as InvestorOrder[]),
   ]);
-  return applyDeskTerms(snap.docs.map((d) => mapTrade(d.id, d.data())), orders);
+  return applyDeskTerms((tradesResp.data ?? []).map((d) => mapTrade(d.id, d)), orders);
 }

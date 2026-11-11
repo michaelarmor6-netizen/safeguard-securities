@@ -1,5 +1,4 @@
-import { collection, addDoc, getDocs, updateDoc, doc, serverTimestamp, query, where, orderBy } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { supabase, nowISO } from '../config/supabase';
 import { createPasswordResetRequestNotification } from '../utils/notificationService';
 
 export interface PasswordResetRequest {
@@ -28,17 +27,17 @@ export const submitPasswordResetRequest = async (
   try {
     // Generate a unique request ID
     const requestId = `PWR-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
+
     const request: Omit<PasswordResetRequest, 'id'> = {
       ...requestData,
       status: 'pending',
-      submittedAt: serverTimestamp(),
+      submittedAt: nowISO(),
       requestId
     };
 
-    const docRef = await addDoc(collection(db, 'password_reset_requests'), request);
+    const { data } = await supabase.from('password_reset_requests').insert(request).select('id').single();
     console.log('Password reset request submitted:', requestId);
-    
+
     // Create notification for admins
     await createPasswordResetRequestNotification({
       requestId,
@@ -47,7 +46,7 @@ export const submitPasswordResetRequest = async (
       username: requestData.username,
       reason: requestData.reason
     });
-    
+
     return requestId;
   } catch (error) {
     console.error('Error submitting password reset request:', error);
@@ -60,22 +59,15 @@ export const submitPasswordResetRequest = async (
  */
 export const getPasswordResetRequests = async (): Promise<PasswordResetRequest[]> => {
   try {
-    const requestsQuery = query(
-      collection(db, 'password_reset_requests'),
-      orderBy('submittedAt', 'desc')
-    );
-    
-    const querySnapshot = await getDocs(requestsQuery);
-    const requests: PasswordResetRequest[] = [];
-    
-    querySnapshot.forEach((doc) => {
-      requests.push({
-        id: doc.id,
-        ...doc.data()
-      } as PasswordResetRequest);
-    });
-    
-    return requests;
+    const { data, error } = await supabase
+      .from('password_reset_requests')
+      .select('*')
+      .order('submitted_at', { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map((d) => ({
+      id: d.id,
+      ...d
+    } as PasswordResetRequest));
   } catch (error) {
     console.error('Error fetching password reset requests:', error);
     throw new Error('Failed to fetch password reset requests.');
@@ -93,11 +85,12 @@ export const updatePasswordResetRequest = async (
   try {
     const updateData = {
       ...updates,
-      reviewedAt: serverTimestamp(),
-      reviewedBy: adminEmail
+      reviewed_at: nowISO(),
+      reviewed_by: adminEmail
     };
-    
-    await updateDoc(doc(db, 'password_reset_requests', requestId), updateData);
+
+    const { error } = await supabase.from('password_reset_requests').update(updateData).eq('id', requestId);
+    if (error) throw error;
     console.log('Password reset request updated:', requestId);
   } catch (error) {
     console.error('Error updating password reset request:', error);
@@ -110,21 +103,15 @@ export const updatePasswordResetRequest = async (
  */
 export const findUserByUsername = async (username: string): Promise<any | null> => {
   try {
-    const usersQuery = query(
-      collection(db, 'users'),
-      where('username', '==', username)
-    );
-    
-    const querySnapshot = await getDocs(usersQuery);
-    
-    if (querySnapshot.empty) {
+    const { data, error } = await supabase.from('users').select('*').eq('username', username);
+    if (error) throw error;
+    if (!data || data.length === 0) {
       return null;
     }
-    
-    const userDoc = querySnapshot.docs[0];
+    const userDoc = data[0];
     return {
       id: userDoc.id,
-      ...userDoc.data()
+      ...userDoc
     };
   } catch (error) {
     console.error('Error finding user by username:', error);
