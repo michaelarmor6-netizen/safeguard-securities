@@ -7,6 +7,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 
 // Auth pages
 import ClientLoginPage from './pages/auth/ClientLoginPage';
+import SignupPage from './pages/auth/SignupPage';
 import ChangePasswordPage from './pages/auth/ChangePasswordPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 
@@ -80,6 +81,7 @@ function AppContent() {
       <Routes>
         {/* Public routes */}
         <Route path="/client-login" element={<PublicRoute><ClientLoginPage /></PublicRoute>} />
+        <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
         <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
         <Route path="/admin-access" element={<PublicRoute><AdminAccessPage /></PublicRoute>} />
         <Route path="/change-password" element={<ChangePasswordPage />} />

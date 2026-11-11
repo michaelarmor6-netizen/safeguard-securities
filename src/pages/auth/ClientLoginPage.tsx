@@ -289,7 +289,13 @@ const ClientLoginPage: React.FC = () => {
 
               <div className="mt-4 text-center space-y-2">
                 <p className="text-sm text-gray-600">
-                  Don't have login credentials? Contact bank support.
+                  Don't have login credentials?
+                  <Link
+                    to="/signup"
+                    className="text-green-600 hover:text-green-800 font-medium underline underline-offset-4"
+                  >
+                    Create an account
+                  </Link>
                 </p>
                 <p className="text-xs text-gray-500">
                   Accounts are created by bank administrators only.
