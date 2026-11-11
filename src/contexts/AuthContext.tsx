@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../config/supabase';
+import { supabase, nowISO } from '../config/supabase';
 import toast from 'react-hot-toast';
-
 interface User {
   id: string;
   email: string;
@@ -73,7 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { firstName, lastName } },
@@ -81,6 +80,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) {
       toast.error(error.message);
       throw error;
+    }
+    // Create a users table row for the new auth user
+    if (data?.user) {
+      await supabase.from('users').upsert({
+        id: data.user.id,
+        email: data.user.email || '',
+        first_name: firstName || '',
+        last_name: lastName || '',
+        role: 'client',
+        is_active: true,
+        created_at: nowISO(),
+        updated_at: nowISO(),
+      }, { onConflict: 'id' });
     }
     toast.success('Account created. Check your email.');
   };
@@ -101,7 +113,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateProfile = async (data: Partial<User>) => {
     if (!user?.id) return;
-    const { error } = await supabase.from('users').update(data as any).eq('id', user.id);
+    const { error } = await supabase.from('users').upsert({
+      id: user.id,
+      ...data,
+      updated_at: nowISO(),
+    } as any, { onConflict: 'id' });
     if (error) throw error;
     setUser({ ...user, ...data } as any);
   };

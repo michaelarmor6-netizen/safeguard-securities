@@ -6,10 +6,11 @@ import { UserRole } from '../types';
 
 export const createAdminUser = async (userId: string, role: UserRole = UserRole.ADMIN) => {
   try {
-    const { error } = await supabase.from('users').update({
+    const { error } = await supabase.from('users').upsert({
+      id: userId,
       role: role,
       updated_at: nowISO()
-    }).eq('id', userId);
+    }, { onConflict: 'id' });
     if (error) throw error;
     const roleLabel = role === UserRole.SUPER_ADMIN ? 'super admin' : 'admin';
     console.log(`User ${userId} has been granted ${roleLabel} privileges`);

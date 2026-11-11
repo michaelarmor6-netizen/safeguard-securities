@@ -36,22 +36,18 @@ const AdminUserCreator: React.FC = () => {
     }
   };
 
-  // Only show in development
-  if (import.meta.env.PROD) {
-    return null;
-  }
-
   return (
     <Card className="p-6 border-2 border-yellow-200 bg-yellow-50">
       <div className="flex items-center mb-4">
         <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2" />
-        <h3 className="text-lg font-semibold text-yellow-800">Development Tool: Admin Creator</h3>
+        <h3 className="text-lg font-semibold text-yellow-800">Create Admin Account</h3>
       </div>
-      
+
       <p className="text-sm text-yellow-700 mb-4">
-        This tool is for development purposes only. Use it to grant admin or super admin privileges to existing users.
+        Create your first administrator account. Sign up at /signup first, then
+        enter your User ID here to grant admin privileges.
       </p>
-      
+
       <form onSubmit={handleCreateAdmin} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -68,7 +64,7 @@ const AdminUserCreator: React.FC = () => {
             You can find the User ID in the browser console after login or in Supabase Auth
           </p>
         </div>
-        
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Role Level
@@ -85,9 +81,9 @@ const AdminUserCreator: React.FC = () => {
             Super Admin can access system settings, branding, and company configuration
           </p>
         </div>
-        
-        <Button 
-          type="submit" 
+
+        <Button
+          type="submit"
           disabled={loading}
           className="flex items-center"
         >
@@ -99,13 +95,13 @@ const AdminUserCreator: React.FC = () => {
           {loading ? 'Granting Privileges...' : `Grant ${selectedRole === UserRole.SUPER_ADMIN ? 'Super Admin' : 'Admin'} Privileges`}
         </Button>
       </form>
-      
+
       <div className="mt-4 p-3 bg-blue-50 rounded-lg">
         <p className="text-sm text-blue-700">
           <strong>How to use:</strong>
         </p>
         <ol className="text-sm text-blue-600 mt-1 space-y-1">
-          <li>1. Sign up a new user account normally</li>
+          <li>1. Sign up a new user account normally at /signup</li>
           <li>2. Check browser console for the User ID after login</li>
           <li>3. Enter the User ID above and click "Grant Admin Privileges"</li>
           <li>4. Sign out and sign back in to see admin interface</li>
