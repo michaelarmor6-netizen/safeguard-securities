@@ -38,6 +38,7 @@ export const orderBy = () => ({});
 export const limit = () => ({});
 export const serverTimestamp = () => new Date();
 export const signInWithCustomToken = asyncNoop;
+export const ref = () => ({});
 
 export class FirebaseError extends Error {
   code: string;
