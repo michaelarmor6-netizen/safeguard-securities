@@ -6,22 +6,27 @@ export default defineConfig({
   plugins: [react()],
   base: '/',
   
+  // Fix Firebase module resolution
+  optimizeDeps: {
+    include: [
+      'firebase/app',
+      'firebase/auth',
+      'firebase/firestore',
+      'firebase/storage',
+      '@firebase/app',
+      '@firebase/auth'
+    ]
+  },
+
   // Build configuration
   build: {
-    // Enable source maps in production for debugging
     sourcemap: true,
-    // Minimize the bundle
     minify: 'terser',
-    // Set target for modern browsers
     target: 'es2020',
-    // Output directory
     outDir: 'dist',
-    // Clean output directory before build
     emptyOutDir: true,
-    // Rollup options
     rollupOptions: {
       output: {
-        // Manual chunking for better caching
         manualChunks: {
           react: ['react', 'react-dom'],
           firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
@@ -36,7 +41,6 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
-    // Keep framing allowed in dev so Cursor Glass preview can load
     headers: {
       'X-Content-Type-Options': 'nosniff',
       'X-XSS-Protection': '1; mode=block',
@@ -47,7 +51,6 @@ export default defineConfig({
   preview: {
     port: 4173,
     host: true,
-    // Security headers for preview - more permissive for testing
     headers: {
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
@@ -56,7 +59,6 @@ export default defineConfig({
     },
   },
 
-  // Environment variables validation
   define: {
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
   },
