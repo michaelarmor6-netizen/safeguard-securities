@@ -1,30 +1,31 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   base: '/',
-  
-  // Fix Firebase module resolution
-  optimizeDeps: {
-    include: [
-      'firebase/app',
-      'firebase/auth',
-      'firebase/firestore',
-      'firebase/storage',
-      '@firebase/app',
-      '@firebase/auth'
-    ]
+
+  resolve: {
+    alias: {
+      '@firebase/app': 'firebase/app',
+      '@firebase/auth': 'firebase/auth',
+      '@firebase/firestore': 'firebase/firestore',
+    },
   },
 
-  // Build configuration
+  optimizeDeps: {
+    include: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
+  },
+
   build: {
     sourcemap: true,
     minify: 'terser',
     target: 'es2020',
     outDir: 'dist',
     emptyOutDir: true,
+    commonjsOptions: {
+      include: [/firebase/, /node_modules/],
+    },
     rollupOptions: {
       output: {
         manualChunks: {
@@ -37,7 +38,6 @@ export default defineConfig({
     },
   },
 
-  // Development server configuration
   server: {
     port: 5173,
     host: true,
@@ -47,7 +47,6 @@ export default defineConfig({
     },
   },
 
-  // Preview server configuration
   preview: {
     port: 4173,
     host: true,
