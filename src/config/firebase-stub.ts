@@ -37,6 +37,7 @@ export const where = () => ({});
 export const orderBy = () => ({});
 export const limit = () => ({});
 export const serverTimestamp = () => new Date();
+export const signInWithCustomToken = asyncNoop;
 
 export class FirebaseError extends Error {
   code: string;
