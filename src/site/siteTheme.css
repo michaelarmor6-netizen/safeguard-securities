@@ -126,21 +126,15 @@
 }
 
 .sgs-wordmark {
-  font-family: var(--sg-font-display, 'Poppins', sans-serif);
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: #fff;
-  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  flex: none;
 }
 
-.sgs-wordmark small {
+.sgs-wordmark img {
   display: block;
-  font-family: var(--sg-font-body, 'Montserrat', sans-serif);
-  font-size: 13px;
-  font-weight: 500;
-  color: #8a93c8;
-  letter-spacing: 0.01em;
+  height: 34px;
+  width: auto;
 }
 
 .sgs-nav {
@@ -1254,8 +1248,8 @@
 }
 
 @media (max-width: 420px) {
-  .sgs-wordmark {
-    font-size: 15px;
+  .sgs-wordmark img {
+    height: 24px;
   }
 
   .sgs-header-actions .sgs-btn-solid {
@@ -1291,6 +1285,10 @@
 
   .sgs-wordmark {
     font-size: 16px;
+  }
+
+  .sgs-wordmark img {
+    height: 28px;
   }
 
   .sgs-menu-btn {
