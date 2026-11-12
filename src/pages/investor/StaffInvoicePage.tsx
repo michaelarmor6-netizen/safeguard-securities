@@ -61,7 +61,7 @@ export default function StaffInvoicePage() {
     return buildInvoiceEmailHtml({
       invoice,
       platformName: settings.platformName,
-      logoUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}/logo-email.png`,
+      logoUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}/sslogo-dark.png`,
       portalUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}/invoice/${invoice.id}`,
       details,
     });
@@ -118,7 +118,7 @@ export default function StaffInvoicePage() {
                       const file = await downloadInvoicePdf({
                         invoice,
                         platformName: settings.platformName,
-                        logoUrl: `${window.location.origin}/logo-email.png`,
+                        logoUrl: `${window.location.origin}/sslogo-dark.png`,
                         details,
                       });
                       toast.success(
@@ -147,7 +147,7 @@ export default function StaffInvoicePage() {
                       const file = await downloadInvoicePdf({
                         invoice,
                         platformName: settings.platformName,
-                        logoUrl: `${window.location.origin}/logo-email.png`,
+                        logoUrl: `${window.location.origin}/sslogo-dark.png`,
                         details,
                       });
                       toast.success(`${file} downloaded — attach it in Thunderbird with the paperclip`);
@@ -190,7 +190,7 @@ export default function StaffInvoicePage() {
         >
           <div className="flex items-start justify-between gap-6 pb-6" style={{ borderBottom: `2px solid ${INK}` }}>
             <div>
-              <img src="/logo-email.png" alt="SafeGuard Securities" className="h-16 w-auto mb-3 max-w-[280px] object-contain" />
+              <img src="/sslogo-dark.png" alt="SafeGuard Securities" className="h-16 w-auto mb-3 max-w-[280px] object-contain" />
               <p style={{ fontWeight: 700 }}>{settings.platformName}</p>
               {details?.companyAddress && (
                 <p style={{ color: MUTED, fontSize: 12, whiteSpace: 'pre-wrap', maxWidth: 240 }}>{details.companyAddress}</p>

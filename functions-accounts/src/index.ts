@@ -532,9 +532,9 @@ export const sendFundingDetailsOnApproval = onDocumentUpdated(
     const clientName = String(
       prof.displayName ?? [prof.firstName, prof.lastName].filter(Boolean).join(' ') ?? '',
     ).trim() || to;
-    // public/logo-email.png = light-background wordmark supplied 2026-08-24 for the
-    // white email header/footer (the app's /logo.png is the dark-background version).
-    const logoUrl = 'https://app.safeguardsecurities.us/logo-email.png';
+    // public/sslogo-dark.png = light-background wordmark supplied 2026-08-24 for the
+    // white email header/footer (the app's /sslogo-dark.png is the dark-background version).
+    const logoUrl = 'https://app.safeguardsecurities.us/sslogo-dark.png';
     const requestDate = after.createdAt?.toDate?.()
       ? (after.createdAt.toDate() as Date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
       : '';
@@ -671,7 +671,7 @@ export const sendInvoiceOnCreate = onDocumentCreated(
           timeZone: 'America/New_York',
         })
       : '';
-    const logoUrl = 'https://app.safeguardsecurities.us/logo-email.png';
+    const logoUrl = 'https://app.safeguardsecurities.us/sslogo-dark.png';
     const portalUrl = `https://app.safeguardsecurities.us/invoice/${event.params.invoiceId}`;
     const name = String(data.billToName ?? to);
 

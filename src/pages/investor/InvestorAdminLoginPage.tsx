@@ -83,7 +83,7 @@ export default function InvestorAdminLoginPage() {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <img
-              src="/logo.png"
+              src="/sslogo-dark.png"
               alt="SafeGuard Securities"
               className="h-12 w-auto max-w-[280px] object-contain mx-auto"
             />

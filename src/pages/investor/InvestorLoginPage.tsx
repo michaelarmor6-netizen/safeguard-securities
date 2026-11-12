@@ -121,7 +121,7 @@ export default function InvestorLoginPage() {
           <div>
             <div className="mb-10 flex items-start justify-between gap-4">
               <div>
-                <img src="/logo.png" alt="SafeGuard Securities" className="h-14 w-auto max-w-[320px] object-contain" />
+                <img src="/sslogo-dark.png" alt="SafeGuard Securities" className="h-14 w-auto max-w-[320px] object-contain" />
                 <p
                   className="text-[11px] uppercase mt-4"
                   style={{ letterSpacing: '0.22em', color: 'var(--sg-muted-2)', fontFamily: 'var(--sg-font-body)' }}
@@ -190,7 +190,7 @@ export default function InvestorLoginPage() {
           </div>
           <div className="w-full max-w-md">
             <div className="lg:hidden mb-8">
-              <img src="/logo.png" alt="SafeGuard Securities" className="h-12 w-auto max-w-[280px] object-contain" />
+              <img src="/sslogo-dark.png" alt="SafeGuard Securities" className="h-12 w-auto max-w-[280px] object-contain" />
               <p className="text-[11px] uppercase tracking-wider mt-3" style={{ color: 'var(--sg-muted-2)' }}>
                 Investor Workspace
               </p>

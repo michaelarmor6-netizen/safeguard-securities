@@ -312,7 +312,7 @@ export default function InvestorWorkspaceLayout() {
             <X className="h-5 w-5" />
           </button>
           <div className="p-4 border-b" style={{ borderColor: 'var(--sg-border)' }}>
-            <img src="/logo.png" alt="SafeGuard Securities" className="h-10 w-auto max-w-full object-contain" />
+            <img src="/sslogo-dark.png" alt="SafeGuard Securities" className="h-10 w-auto max-w-full object-contain" />
             <p
               className="text-[10px] uppercase mt-3"
               style={{ letterSpacing: '0.2em', color: 'var(--sg-muted-2)', fontFamily: 'var(--sg-font-body)' }}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface LogoDisplayProps {
   logoUrl: string;
@@ -14,10 +15,13 @@ const LogoDisplay: React.FC<LogoDisplayProps> = ({
   className = "" 
 }) => {
   const [imageError, setImageError] = useState(false);
-  
-  // Default static logo path - always available immediately
-  const defaultLogoPath = '/logo.png';
-  
+  const { theme } = useTheme();
+
+  // Default static logo path - always available immediately.
+  // Picked per active theme so the wordmark stays readable (white on dark,
+  // navy on light). Both variants come from scripts/generate-logo-variants.mjs.
+  const defaultLogoPath = theme === 'light' ? '/sslogo-dark.png' : '/sslogo.png';
+
   // Determine which logo to use with priority:
   // 1. Static default logo (immediate, no flickering)
   // 2. Custom logo from SystemConfig (if available)
@@ -28,7 +32,13 @@ const LogoDisplay: React.FC<LogoDisplayProps> = ({
       console.log('🎯 LogoDisplay: Using default static logo');
       return defaultLogoPath;
     }
-    
+
+    // The stock brand assets swap with the theme; a genuinely custom
+    // (admin-uploaded) URL is used as-is.
+    if (/^\/sslogo(-dark)?\.png$/.test(logoUrl.trim())) {
+      return defaultLogoPath;
+    }
+
     // If we have a valid custom logo URL, use it
     if (isValidLogoUrl(logoUrl)) {
       console.log('🎯 LogoDisplay: Using custom logo from SystemConfig');

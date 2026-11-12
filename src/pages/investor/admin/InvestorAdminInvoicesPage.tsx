@@ -391,7 +391,7 @@ export default function InvestorAdminInvoicesPage() {
                           const file = await downloadInvoicePdf({
                             invoice: inv,
                             platformName: settings.platformName,
-                            logoUrl: `${window.location.origin}/logo-email.png`,
+                            logoUrl: `${window.location.origin}/sslogo-dark.png`,
                             details,
                           });
                           toast.success(`${file} downloaded — attach in Thunderbird`);

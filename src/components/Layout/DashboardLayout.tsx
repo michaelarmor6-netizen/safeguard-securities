@@ -176,7 +176,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title, subt
                 ) : (
                   <div className="w-full h-20 flex items-center justify-center">
                     <img 
-                      src="/logo.png"
+                      src="/sslogo-dark.png"
                       alt="Logo"
                       className="w-full h-20 object-contain"
                     />

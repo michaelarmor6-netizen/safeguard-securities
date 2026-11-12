@@ -59,7 +59,7 @@ export default function SettingsAppearanceSection() {
           className="sg-input mt-1.5"
           value={form.logoUrl}
           onChange={(e) => setForm((f) => ({ ...f, logoUrl: e.target.value }))}
-          placeholder="https://... (leave blank to use the default /logo.png)"
+          placeholder="https://... (leave blank to use the default /sslogo-dark.png)"
         />
         {form.logoUrl && (
           <div className="mt-2 p-3 rounded-lg inline-block" style={{ background: 'var(--sg-surface)' }}>
@@ -68,7 +68,7 @@ export default function SettingsAppearanceSection() {
         )}
         <p className="text-[11px] mt-1" style={{ color: 'var(--sg-muted-2)' }}>
           Stored for reference and welcome-email branding. Swapping the app-wide logo image requires replacing
-          /logo.png in the deploy.
+          /sslogo-dark.png in the deploy.
         </p>
       </div>
 

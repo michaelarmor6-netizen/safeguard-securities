@@ -202,7 +202,7 @@ export default function InvestorTradeDeskPage() {
       <div className="sg-shell sg-shell-grid py-10 px-4">
         <div className="relative z-10 max-w-2xl mx-auto">
           <div className="flex items-center justify-between mb-6">
-            <img src="/logo.png" alt="SafeGuard Securities" className="h-8 w-auto" />
+            <img src="/sslogo-dark.png" alt="SafeGuard Securities" className="h-8 w-auto" />
             <ThemeToggle />
           </div>
           <div className="sg-panel p-8 text-center space-y-4" style={{ borderRadius: 18 }}>
@@ -244,7 +244,7 @@ export default function InvestorTradeDeskPage() {
       <div className="sg-shell sg-shell-grid py-10 px-4">
         <div className="relative z-10 max-w-3xl mx-auto">
           <div className="flex items-center justify-between mb-6">
-            <img src="/logo.png" alt="SafeGuard Securities" className="h-8 w-auto" />
+            <img src="/sslogo-dark.png" alt="SafeGuard Securities" className="h-8 w-auto" />
             <ThemeToggle />
           </div>
           <FundingRequiredNotice
@@ -340,7 +340,7 @@ export default function InvestorTradeDeskPage() {
         className="border-b px-4 py-2 flex items-center gap-4 shrink-0 flex-wrap"
         style={{ borderColor: 'var(--sg-border)', background: 'var(--sg-bg-panel)' }}
       >
-        <img src="/logo.png" alt="SafeGuard Securities" className="h-7 w-auto max-w-[140px] object-contain" />
+        <img src="/sslogo-dark.png" alt="SafeGuard Securities" className="h-7 w-auto max-w-[140px] object-contain" />
         <span className="text-sm font-semibold hidden sm:block" style={{ color: 'var(--sg-text)', fontFamily: 'var(--sg-font-display)' }}>
           Trading Desk
         </span>

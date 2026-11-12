@@ -143,7 +143,7 @@ export default function InvestorAdminLayout() {
         >
           <Menu className="h-5 w-5" />
         </button>
-        <img src="/logo.png" alt="SafeGuard Securities" className="h-7 w-auto object-contain" />
+        <img src="/sslogo-dark.png" alt="SafeGuard Securities" className="h-7 w-auto object-contain" />
         <span
           className="text-[10px] uppercase tracking-wider"
           style={{ color: 'var(--sg-teal)', letterSpacing: '0.15em' }}
@@ -182,7 +182,7 @@ export default function InvestorAdminLayout() {
           <X className="h-5 w-5" />
         </button>
         <div className="p-5 border-b" style={{ borderColor: 'var(--sg-border)' }}>
-          <img src="/logo.png" alt="SafeGuard Securities" className="h-12 w-auto max-w-full object-contain mb-3" />
+          <img src="/sslogo-dark.png" alt="SafeGuard Securities" className="h-12 w-auto max-w-full object-contain mb-3" />
           <p
             className="text-xs uppercase tracking-wider"
             style={{ color: 'var(--sg-teal)', fontFamily: 'var(--sg-font-body)', letterSpacing: '0.15em' }}

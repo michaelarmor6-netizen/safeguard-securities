@@ -18,7 +18,7 @@ const defaultConfig: SystemConfig = {
   },
   branding: {
     logo: {
-      primary: '/logo.png',
+      primary: '/sslogo-dark.png',
       width: 200,
       height: 60
     },
@@ -248,7 +248,7 @@ export const useSystemConfig = () => {
   // Helper functions for easier access to common config values
   const getCompanyName = () => config.companyInfo.name;
   const getPrimaryLogo = () => {
-    const logo = config.branding.logo.primary || '/logo.png';
+    const logo = config.branding.logo.primary || '/sslogo-dark.png';
     return logo;
   };
   const getPrimaryColor = () => config.branding.colors.primary;

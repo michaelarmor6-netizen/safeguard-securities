@@ -203,8 +203,8 @@ export default function SiteLayout() {
 
       <header className="sgs-header" onMouseLeave={() => setOpenMenu(null)}>
         <div className="sgs-wrap sgs-header-inner">
-          <Link to="/" className="sgs-wordmark" aria-label="Safeguard Securities, Inc. — home">
-            <img src="/sslogo.png" alt="Safeguard Securities, Inc." />
+          <Link to="/" className="sgs-wordmark" aria-label="Safeguard Securities, LLC — home">
+            <img src="/sslogo.png" alt="Safeguard Securities, LLC" />
           </Link>
           <nav className="sgs-nav" aria-label="Primary">
             {NAV.map((n) => (
@@ -293,8 +293,8 @@ export default function SiteLayout() {
         <div className="sgs-wrap">
           <div className="sgs-footer-grid">
             <div className="sgs-footer-brand">
-              <Link to="/" className="sgs-wordmark" aria-label="Safeguard Securities, Inc. — home">
-                <img src="/sslogo.png" alt="Safeguard Securities, Inc." loading="lazy" />
+              <Link to="/" className="sgs-wordmark" aria-label="Safeguard Securities, LLC — home">
+                <img src="/sslogo.png" alt="Safeguard Securities, LLC" loading="lazy" />
               </Link>
               <p>
                 Institutional investment and brokerage for serious investors: clear strategy, active
@@ -330,7 +330,7 @@ export default function SiteLayout() {
             ))}
           </div>
           <div className="sgs-footer-legal">
-            <span>© 2026 Safeguard Securities, Inc. All rights reserved.</span>
+            <span>© 2026 Safeguard Securities, LLC All rights reserved.</span>
             <span>
               <a href="https://safeguardsecurities.us" rel="noopener noreferrer">
                 Terms &amp; disclosures

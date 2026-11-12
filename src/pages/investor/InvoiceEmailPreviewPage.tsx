@@ -40,7 +40,7 @@ export default function InvoiceEmailPreviewPage() {
     return buildInvoiceEmailHtml({
       invoice,
       platformName: settings.platformName,
-      logoUrl: `${window.location.origin}/logo-email.png`,
+      logoUrl: `${window.location.origin}/sslogo-dark.png`,
       portalUrl: `${window.location.origin}/invoice/${invoice.id}`,
       details,
     });
@@ -86,7 +86,7 @@ export default function InvoiceEmailPreviewPage() {
       const file = await downloadInvoicePdf({
         invoice,
         platformName: settings.platformName,
-        logoUrl: `${window.location.origin}/logo-email.png`,
+        logoUrl: `${window.location.origin}/sslogo-dark.png`,
         details,
       });
       toast.success(`${file} downloaded — attach it in Thunderbird with the paperclip`);
@@ -104,7 +104,7 @@ export default function InvoiceEmailPreviewPage() {
       const file = await downloadInvoicePdf({
         invoice,
         platformName: settings.platformName,
-        logoUrl: `${window.location.origin}/logo-email.png`,
+        logoUrl: `${window.location.origin}/sslogo-dark.png`,
         details,
       });
       setCopied(true);

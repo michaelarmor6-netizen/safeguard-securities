@@ -64,7 +64,7 @@ export default function FundingEmailPreviewPage() {
       requestDate: request.createdAt
         ? request.createdAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
         : '',
-      logoUrl: `${window.location.origin}/logo-email.png`,
+      logoUrl: `${window.location.origin}/sslogo-dark.png`,
       portalUrl: `${window.location.origin}/workspace/wallet`,
       details,
     });
