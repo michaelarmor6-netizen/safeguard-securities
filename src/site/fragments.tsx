@@ -34,7 +34,7 @@ export function useReveal<T extends HTMLElement>() {
       );
     }
     revealObserver.observe(el);
-    return () => revealObserver.unobserve(el);
+    return () => revealObserver!.unobserve(el);
   }, []);
   return ref;
 }
