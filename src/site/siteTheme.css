@@ -122,7 +122,7 @@
   display: flex;
   align-items: center;
   gap: 28px;
-  height: 66px;
+  height: 68px;
 }
 
 .sgs-wordmark {
@@ -133,8 +133,13 @@
 
 .sgs-wordmark img {
   display: block;
-  height: 42px;
+  height: 56px;
   width: auto;
+}
+
+/* footer keeps a modest lockup — the big one is the header's */
+.sgs-footer .sgs-wordmark img {
+  height: 34px;
 }
 
 .sgs-nav {
@@ -180,7 +185,7 @@
 
 .sgs-mega {
   position: absolute;
-  top: 66px;
+  top: 68px;
   left: 0;
   right: 0;
   background: #fff;
@@ -1252,7 +1257,7 @@
 
 @media (max-width: 420px) {
   .sgs-wordmark img {
-    height: 26px;
+    height: 40px;
   }
 
   .sgs-header-actions .sgs-btn-solid {
@@ -1291,7 +1296,7 @@
   }
 
   .sgs-wordmark img {
-    height: 32px;
+    height: 44px;
   }
 
   .sgs-menu-btn {
