@@ -171,7 +171,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, subtitle }) 
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100 lg:bg-gray-100/20">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
@@ -180,11 +180,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, subtitle }) 
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl transform ${
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-gray-900/80 shadow-xl transform ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
         {/* Sidebar Header - Enhanced Logo */}
-        <div className="flex items-center justify-between h-24 px-4 bg-white shadow-sm border-b">
+        <div className="flex items-center justify-between h-24 px-4 bg-gray-900/80 shadow-sm border-b">
           <div className="flex items-center w-full">
             <div className="w-full max-w-xs">
               {!configLoading ? (
@@ -244,8 +244,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, subtitle }) 
                 to={item.path}
                 className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                   isActive
-                    ? 'bg-red-100 text-red-700 border-r-2 border-red-500'
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                    ? 'bg-indigo-600 text-indigo-50 border-r-2 border-indigo-500'
+                    : 'text-gray-400 hover:bg-gray-900/50 hover:text-gray-300'
                 }`}
                 onClick={() => setSidebarOpen(false)}
               >
