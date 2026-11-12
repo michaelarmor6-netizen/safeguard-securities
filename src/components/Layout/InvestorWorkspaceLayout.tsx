@@ -381,7 +381,7 @@ export default function InvestorWorkspaceLayout() {
               type="button"
               onClick={async () => {
                 await signOut();
-                window.location.href = 'https://safeguardsecurities.us';
+                window.location.href = '/';
               }}
               className="w-full flex items-center gap-2.5 rounded-[10px] px-3 py-2.5 lg:py-2 text-sm transition"
               style={{ color: 'var(--sg-muted-2)' }}

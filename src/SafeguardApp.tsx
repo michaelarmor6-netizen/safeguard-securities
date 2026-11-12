@@ -55,6 +55,12 @@ import InvestorAdminCrmImportsPage from './pages/investor/admin/crm/InvestorAdmi
 import InvestorAdminCrmCampaignsPage from './pages/investor/admin/crm/InvestorAdminCrmCampaignsPage';
 import InvestorAdminCrmInstrumentsPage from './pages/investor/admin/crm/InvestorAdminCrmInstrumentsPage';
 import { useApplyBrandColors } from './hooks/useApplyBrandColors';
+import SiteLayout from './site/SiteLayout';
+import HomePage from './site/HomePage';
+import AboutPage from './site/AboutPage';
+import ServicesPage from './site/ServicesPage';
+import TeamPage from './site/TeamPage';
+import ContactPage from './site/ContactPage';
 import './styles/safeguardTheme.css';
 
 function AdminGuard({ children }: { children: React.ReactNode }) {
@@ -149,16 +155,14 @@ function SafeguardRoutes() {
         <Route path="audit" element={<InvestorAdminAuditPage />} />
         <Route path="settings" element={<InvestorAdminSettingsPage />} />
       </Route>
-      <Route
-        path="/"
-        element={
-          user ? (
-            isAdmin ? <Navigate to="/admin" replace /> : <Navigate to="/workspace/dashboard" replace />
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
-      />
+      {/* public marketing site — visible to everyone, including signed-in users */}
+      <Route element={<SiteLayout />}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/services" element={<ServicesPage />} />
+        <Route path="/team" element={<TeamPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+      </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

@@ -294,7 +294,7 @@ export default function InvestorLoginPage() {
 
             <p className="text-xs mt-4 text-center">
               <a
-                href="https://safeguardsecurities.us"
+                href="/"
                 className="underline hover:no-underline"
                 style={{ color: 'var(--sg-muted-2)' }}
               >

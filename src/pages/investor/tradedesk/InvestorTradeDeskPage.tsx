@@ -479,7 +479,7 @@ export default function InvestorTradeDeskPage() {
               type="button"
               onClick={async () => {
                 await signOut();
-                window.location.href = 'https://safeguardsecurities.us';
+                window.location.href = '/';
               }}
               className="w-full flex items-center gap-2.5 rounded-[8px] px-3 py-2 text-sm"
               style={{ color: 'var(--sg-muted-2)' }}
