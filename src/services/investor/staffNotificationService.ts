@@ -30,8 +30,12 @@ function mapNotice(id: string, data: any): StaffNotice {
 export function subscribeStaffNotices(
   onChange: (rows: StaffNotice[]) => void,
 ) {
+  // Unique name per subscription: React StrictMode double-mounts effects, and
+  // `supabase.channel(name)` returns the SAME channel instance while the first
+  // mount's removeChannel() is still in flight - calling .on() on an already
+  // subscribed channel throws, which unmounts the whole admin tree.
   const channel = supabase
-    .channel('staff-notices')
+    .channel(`staff-notices-${Math.random().toString(36).slice(2, 8)}`)
     .on(
       'postgres_changes',
       {
