@@ -1,0 +1,2653 @@
+{
+ "url": "http://localhost:5173/",
+ "at": "2026-11-12T01:29:17.035Z",
+ "allow": [],
+ "viewports": [
+  {
+   "width": 1440,
+   "height": 900,
+   "load": "load",
+   "screens": 5,
+   "filled": [
+    0.67,
+    0.62,
+    0.72,
+    0.55,
+    0.8
+   ],
+   "motion": {
+    "elements": 23,
+    "css": 0,
+    "transitions": 23,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "page": {
+     "height": 4459,
+     "screens": 5,
+     "words": 670,
+     "img": 4,
+     "video": 0,
+     "canvas": 0,
+     "svg": 9,
+     "sections": 9,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 1,
+     "uiAbuse": false,
+     "realPictures": 2,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [
+      "reflective-skyscraper-facade-unsplash.jpg",
+      "sunlight-on-the-curved-honeycomb-glass-facade.jp"
+     ],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Institutional discipline, applied.",
+     "words": 3,
+     "chars": 34,
+     "lines": 2,
+     "size": 48,
+     "vw": 3.3,
+     "font": "Poppins",
+     "weight": 600,
+     "tracking": -0.03,
+     "leading": 1.1,
+     "upper": false,
+     "italic": false,
+     "mono": false,
+     "align": "left",
+     "position": "center",
+     "widthRatio": 0.44,
+     "top": 225,
+     "tag": "h1",
+     "kind": "heading"
+    },
+    "h1": {
+     "text": "Institutional discipline, applied.",
+     "words": 3,
+     "lines": 2,
+     "size": 48,
+     "font": "Poppins"
+    },
+    "headings": [
+     {
+      "text": "Institutional discipline, applied.",
+      "words": 3,
+      "chars": 34,
+      "lines": 2,
+      "size": 48,
+      "vw": 3.3,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.03,
+      "leading": 1.1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.44,
+      "top": 225,
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "A brokerage built for clarity",
+      "words": 5,
+      "chars": 29,
+      "lines": 1,
+      "size": 34,
+      "vw": 2.4,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.31,
+      "top": 700,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Discover a world of opportunities",
+      "words": 5,
+      "chars": 33,
+      "lines": 2,
+      "size": 34,
+      "vw": 2.4,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.34,
+      "top": 1185,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "40+",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 62,
+      "vw": 4.3,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.03,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.24,
+      "top": 1393,
+      "tag": "strong",
+      "kind": "heading"
+     },
+     {
+      "text": "9",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 62,
+      "vw": 4.3,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.03,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.24,
+      "top": 1393,
+      "tag": "strong",
+      "kind": "heading"
+     },
+     {
+      "text": "24/7",
+      "words": 1,
+      "chars": 4,
+      "lines": 1,
+      "size": 62,
+      "vw": 4.3,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.03,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.24,
+      "top": 1393,
+      "tag": "strong",
+      "kind": "heading"
+     },
+     {
+      "text": "Powerful platforms to help you succeed",
+      "words": 6,
+      "chars": 38,
+      "lines": 1,
+      "size": 34,
+      "vw": 2.4,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.45,
+      "top": 1633,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "A broker you can audit",
+      "words": 5,
+      "chars": 22,
+      "lines": 1,
+      "size": 34,
+      "vw": 2.4,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.38,
+      "top": 2450,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Building your wealth across sectors",
+      "words": 5,
+      "chars": 35,
+      "lines": 1,
+      "size": 34,
+      "vw": 2.4,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.41,
+      "top": 2987,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Choose the account that fits. Open it in minutes.",
+      "words": 9,
+      "chars": 49,
+      "lines": 1,
+      "size": 34,
+      "vw": 2.4,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.55,
+      "top": 3430,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "The desk keeps market hours. Your records keep working.",
+      "words": 9,
+      "chars": 55,
+      "lines": 1,
+      "size": 28,
+      "vw": 1.9,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.02,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.55,
+      "top": 3843,
+      "tag": "h2",
+      "kind": "heading"
+     }
+    ],
+    "headingSummary": {
+     "count": 11,
+     "maxLines": 2,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": 5,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Montserrat",
+       "share": 0.81,
+       "mono": false
+      },
+      {
+       "family": "Poppins",
+       "share": 0.19,
+       "mono": false
+      }
+     ],
+     "familyCount": 2,
+     "sizes": [
+      13,
+      14,
+      15,
+      17,
+      18,
+      24,
+      27,
+      28,
+      34,
+      48,
+      62
+     ],
+     "sizeCount": 11,
+     "notLoaded": [],
+     "body": {
+      "font": "Montserrat",
+      "size": 13.5,
+      "leading": 1.55,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 13.2
+     },
+     "measureChars": 84,
+     "max": {
+      "size": 62,
+      "vw": 4.3,
+      "font": "Poppins",
+      "text": "40+"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 4,
+     "microLabelShare": 0.007,
+     "microSamples": [
+      "Account",
+      "Products",
+      "Company",
+      "Support"
+     ],
+     "upperShare": 0.01,
+     "centerShare": 0.04,
+     "smallText": 0
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#ffffff",
+     "bodyBgHsl": {
+      "h": 0,
+      "s": 0,
+      "l": 1
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#ffffff",
+       "top": 0,
+       "hsl": {
+        "h": 0,
+        "s": 0,
+        "l": 1
+       }
+      },
+      {
+       "color": "#0a0e27",
+       "top": 104,
+       "hsl": {
+        "h": 232,
+        "s": 0.59,
+        "l": 0.1
+       }
+      },
+      {
+       "color": "#f5f6fa",
+       "top": 2011,
+       "hsl": {
+        "h": 228,
+        "s": 0.33,
+        "l": 0.97
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#5b6472",
+       "share": 0.46
+      },
+      {
+       "color": "#171c2e",
+       "share": 0.16
+      },
+      {
+       "color": "#aeb6d6",
+       "share": 0.1
+      },
+      {
+       "color": "#8a93c8",
+       "share": 0.07
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.07
+      }
+     ],
+     "button": {
+      "bg": "#ffffff",
+      "hsl": {
+       "h": 0,
+       "s": 0,
+       "l": 1
+      },
+      "fg": "#171c2e"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 13,
+     "inHero": 3,
+     "radius": 8,
+     "height": 61,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Log In",
+      "Open Account",
+      "Start your account"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 1,
+     "hairlineSamples": [
+      "div.sgs-footer-legal 1144px"
+     ],
+     "outlinedBoxes": 8,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 10,
+     "boxRadius": 10,
+     "squareMedia": 1,
+     "roundedMedia": 1,
+     "mediaRadius": 12,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 4,
+       "iconTopped": true,
+       "rounded": true,
+       "top": 779
+      },
+      {
+       "count": 4,
+       "iconTopped": false,
+       "rounded": true,
+       "top": 1712
+      },
+      {
+       "count": 3,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 3509
+      }
+     ]
+    },
+    "heroMedia": [
+     {
+      "type": "img",
+      "ratio": 0.58
+     }
+    ],
+    "nav": {
+     "links": 3,
+     "fixed": true,
+     "height": 62,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "montserrat",
+     "poppins"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "pageH": 4459,
+    "margins": {
+     "left": 148,
+     "right": 148
+    },
+    "sections": [
+     {
+      "sel": "section.sgs-hero",
+      "tag": "section",
+      "top": 104,
+      "height": 520,
+      "words": 33,
+      "media": 1,
+      "middle": 0,
+      "heading": {
+       "text": "Institutional discipline, applied.",
+       "size": 48,
+       "tag": "h1"
+      },
+      "left": 400,
+      "right": 510,
+      "textLeft": 400,
+      "textRight": 510,
+      "fullBleed": true,
+      "footer": false,
+      "hero": true,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.sgs-section",
+      "tag": "section",
+      "top": 624,
+      "height": 491,
+      "words": 94,
+      "media": 0,
+      "middle": 88,
+      "heading": {
+       "text": "A brokerage built for clarity",
+       "size": 34,
+       "tag": "h2"
+      },
+      "left": 148,
+      "right": 177,
+      "textLeft": 148,
+      "textRight": 177,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.sgs-stats-band",
+      "tag": "section",
+      "top": 1115,
+      "height": 442,
+      "words": 45,
+      "media": 0,
+      "middle": 158,
+      "heading": {
+       "text": "40+",
+       "size": 62,
+       "tag": "strong"
+      },
+      "left": 148,
+      "right": 256,
+      "textLeft": 148,
+      "textRight": 256,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#platforms-home.sgs-section",
+      "tag": "section",
+      "top": 1557,
+      "height": 454,
+      "words": 98,
+      "media": 0,
+      "middle": 82,
+      "heading": {
+       "text": "Powerful platforms to help you succeed",
+       "size": 34,
+       "tag": "h2"
+      },
+      "left": 148,
+      "right": 148,
+      "textLeft": 148,
+      "textRight": 148,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.sgs-section.sgs-quote-band",
+      "tag": "section",
+      "top": 2011,
+      "height": 309,
+      "words": 30,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "“The research is concise, the execution is reliabl",
+       "size": 27,
+       "tag": "p"
+      },
+      "left": 148,
+      "right": 327,
+      "textLeft": 148,
+      "textRight": 327,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.sgs-section",
+      "tag": "section",
+      "top": 2320,
+      "height": 590,
+      "words": 123,
+      "media": 1,
+      "middle": 50,
+      "heading": {
+       "text": "A broker you can audit",
+       "size": 34,
+       "tag": "h2"
+      },
+      "left": 148,
+      "right": 148,
+      "textLeft": 148,
+      "textRight": 256,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#strategies-home.sgs-section.sgs-section-alt",
+      "tag": "section",
+      "top": 2911,
+      "height": 443,
+      "words": 43,
+      "media": 0,
+      "middle": 71,
+      "heading": {
+       "text": "Building your wealth across sectors",
+       "size": 34,
+       "tag": "h2"
+      },
+      "left": 148,
+      "right": 148,
+      "textLeft": 148,
+      "textRight": 148,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.sgs-section",
+      "tag": "section",
+      "top": 3354,
+      "height": 429,
+      "words": 79,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Choose the account that fits. Open it in minutes.",
+       "size": 34,
+       "tag": "h2"
+      },
+      "left": 148,
+      "right": 165,
+      "textLeft": 148,
+      "textRight": 165,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.sgs-live-band",
+      "tag": "section",
+      "top": 3782,
+      "height": 235,
+      "words": 50,
+      "media": 0,
+      "middle": 149,
+      "heading": {
+       "text": "The desk keeps market hours. Your records keep wor",
+       "size": 28,
+       "tag": "h2"
+      },
+      "left": 148,
+      "right": 171,
+      "textLeft": 148,
+      "textRight": 171,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "footer.sgs-footer",
+      "tag": "footer",
+      "top": 4017,
+      "height": 442,
+      "words": 84,
+      "media": 0,
+      "middle": 104,
+      "heading": {
+       "text": "Account",
+       "size": 13,
+       "tag": "h3"
+      },
+      "left": 148,
+      "right": 107,
+      "textLeft": 148,
+      "textRight": 107,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "Institutional discipline, applied.",
+      "size": 48,
+      "top": 225,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 148,
+      "n": 14
+     },
+     {
+      "x": 173,
+      "n": 4
+     },
+     {
+      "x": 465,
+      "n": 4
+     },
+     {
+      "x": 756,
+      "n": 4
+     },
+     {
+      "x": 1048,
+      "n": 4
+     },
+     {
+      "x": 400,
+      "n": 2
+     },
+     {
+      "x": 537,
+      "n": 2
+     },
+     {
+      "x": 925,
+      "n": 2
+     }
+    ],
+    "leftBlocks": 36,
+    "bodySize": 14,
+    "stage": false,
+    "explains": true,
+    "slivers": [],
+    "voidShare": 0.12,
+    "voidBox": {
+     "x": 600,
+     "y": 660,
+     "w": 840,
+     "h": 180
+    }
+   },
+   "app": null,
+   "consoleErrors": []
+  },
+  {
+   "width": 768,
+   "height": 1024,
+   "load": "load",
+   "screens": 6,
+   "filled": [
+    0.68,
+    0.56,
+    0.51,
+    0.75,
+    0.56,
+    1
+   ],
+   "motion": {
+    "elements": 23,
+    "css": 0,
+    "transitions": 23,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "page": {
+     "height": 5971,
+     "screens": 5.8,
+     "words": 665,
+     "img": 4,
+     "video": 0,
+     "canvas": 0,
+     "svg": 9,
+     "sections": 9,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 1,
+     "uiAbuse": false,
+     "realPictures": 2,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [
+      "reflective-skyscraper-facade-unsplash.jpg",
+      "sunlight-on-the-curved-honeycomb-glass-facade.jp"
+     ],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Institutional discipline, applied.",
+     "words": 3,
+     "chars": 34,
+     "lines": 1,
+     "size": 32,
+     "vw": 4.2,
+     "font": "Poppins",
+     "weight": 600,
+     "tracking": -0.03,
+     "leading": 1.1,
+     "upper": false,
+     "italic": false,
+     "mono": false,
+     "align": "left",
+     "position": "center",
+     "widthRatio": 0.71,
+     "top": 260,
+     "tag": "h1",
+     "kind": "heading"
+    },
+    "h1": {
+     "text": "Institutional discipline, applied.",
+     "words": 3,
+     "lines": 1,
+     "size": 32,
+     "font": "Poppins"
+    },
+    "headings": [
+     {
+      "text": "Institutional discipline, applied.",
+      "words": 3,
+      "chars": 34,
+      "lines": 1,
+      "size": 32,
+      "vw": 4.2,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.03,
+      "leading": 1.1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.71,
+      "top": 260,
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "A brokerage built for clarity",
+      "words": 5,
+      "chars": 29,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.44,
+      "top": 700,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Discover a world of opportunities",
+      "words": 5,
+      "chars": 33,
+      "lines": 2,
+      "size": 26,
+      "vw": 3.4,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.48,
+      "top": 1412,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "40+",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 40,
+      "vw": 5.2,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.03,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.24,
+      "top": 1602,
+      "tag": "strong",
+      "kind": "heading"
+     },
+     {
+      "text": "9",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 40,
+      "vw": 5.2,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.03,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.24,
+      "top": 1602,
+      "tag": "strong",
+      "kind": "heading"
+     },
+     {
+      "text": "24/7",
+      "words": 1,
+      "chars": 4,
+      "lines": 1,
+      "size": 40,
+      "vw": 5.2,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.03,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.24,
+      "top": 1602,
+      "tag": "strong",
+      "kind": "heading"
+     },
+     {
+      "text": "Powerful platforms to help you succeed",
+      "words": 6,
+      "chars": 38,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.65,
+      "top": 1843,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "A broker you can audit",
+      "words": 5,
+      "chars": 22,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.88,
+      "top": 2811,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Building your wealth across sectors",
+      "words": 5,
+      "chars": 35,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.58,
+      "top": 3847,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Choose the account that fits. Open it in minutes.",
+      "words": 9,
+      "chars": 49,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.78,
+      "top": 4431,
+      "tag": "h2",
+      "kind": "heading"
+     }
+    ],
+    "headingSummary": {
+     "count": 10,
+     "maxLines": 2,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": 5,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Montserrat",
+       "share": 0.81,
+       "mono": false
+      },
+      {
+       "family": "Poppins",
+       "share": 0.19,
+       "mono": false
+      }
+     ],
+     "familyCount": 2,
+     "sizes": [
+      13,
+      14,
+      15,
+      17,
+      18,
+      20,
+      22,
+      24,
+      26,
+      32,
+      40
+     ],
+     "sizeCount": 11,
+     "notLoaded": [],
+     "body": {
+      "font": "Montserrat",
+      "size": 13.5,
+      "leading": 1.55,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 13.2
+     },
+     "measureChars": 87,
+     "max": {
+      "size": 40,
+      "vw": 5.2,
+      "font": "Poppins",
+      "text": "40+"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 4,
+     "microLabelShare": 0.007,
+     "microSamples": [
+      "Account",
+      "Products",
+      "Company",
+      "Support"
+     ],
+     "upperShare": 0.01,
+     "centerShare": 0.03,
+     "smallText": 0
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#ffffff",
+     "bodyBgHsl": {
+      "h": 0,
+      "s": 0,
+      "l": 1
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#ffffff",
+       "top": 0,
+       "hsl": {
+        "h": 0,
+        "s": 0,
+        "l": 1
+       }
+      },
+      {
+       "color": "#0a0e27",
+       "top": 104,
+       "hsl": {
+        "h": 232,
+        "s": 0.59,
+        "l": 0.1
+       }
+      },
+      {
+       "color": "#f5f6fa",
+       "top": 3771,
+       "hsl": {
+        "h": 228,
+        "s": 0.33,
+        "l": 0.97
+       }
+      },
+      {
+       "color": "#12183a",
+       "top": 4839,
+       "hsl": {
+        "h": 231,
+        "s": 0.53,
+        "l": 0.15
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#5b6472",
+       "share": 0.46
+      },
+      {
+       "color": "#171c2e",
+       "share": 0.17
+      },
+      {
+       "color": "#aeb6d6",
+       "share": 0.1
+      },
+      {
+       "color": "#8a93c8",
+       "share": 0.07
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.07
+      }
+     ],
+     "button": {
+      "bg": "#ffffff",
+      "hsl": {
+       "h": 0,
+       "s": 0,
+       "l": 1
+      },
+      "fg": "#171c2e"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 13,
+     "inHero": 3,
+     "radius": 8,
+     "height": 61,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Log In",
+      "Open Account",
+      "Start your account"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 1,
+     "hairlineSamples": [
+      "div.sgs-footer-legal 672px"
+     ],
+     "outlinedBoxes": 8,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 10,
+     "boxRadius": 10,
+     "squareMedia": 1,
+     "roundedMedia": 1,
+     "mediaRadius": 12,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 4,
+       "iconTopped": true,
+       "rounded": true,
+       "top": 770
+      },
+      {
+       "count": 4,
+       "iconTopped": false,
+       "rounded": true,
+       "top": 1955
+      },
+      {
+       "count": 3,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 4501
+      }
+     ]
+    },
+    "heroMedia": [
+     {
+      "type": "img",
+      "ratio": 0.51
+     }
+    ],
+    "nav": {
+     "links": 3,
+     "fixed": true,
+     "height": 62,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "montserrat",
+     "poppins"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "pageH": 5971,
+    "margins": {
+     "left": 48,
+     "right": 48
+    },
+    "sections": [
+     {
+      "sel": "section.sgs-hero",
+      "tag": "section",
+      "top": 104,
+      "height": 520,
+      "words": 33,
+      "media": 1,
+      "middle": 0,
+      "heading": {
+       "text": "Institutional discipline, applied.",
+       "size": 32,
+       "tag": "h1"
+      },
+      "left": 110,
+      "right": 128,
+      "textLeft": 110,
+      "textRight": 128,
+      "fullBleed": true,
+      "footer": false,
+      "hero": true,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.sgs-section",
+      "tag": "section",
+      "top": 624,
+      "height": 718,
+      "words": 94,
+      "media": 0,
+      "middle": 30,
+      "heading": {
+       "text": "A brokerage built for clarity",
+       "size": 26,
+       "tag": "h2"
+      },
+      "left": 48,
+      "right": 91,
+      "textLeft": 48,
+      "textRight": 91,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.sgs-stats-band",
+      "tag": "section",
+      "top": 1342,
+      "height": 424,
+      "words": 45,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "40+",
+       "size": 40,
+       "tag": "strong"
+      },
+      "left": 48,
+      "right": 84,
+      "textLeft": 48,
+      "textRight": 84,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#platforms-home.sgs-section",
+      "tag": "section",
+      "top": 1767,
+      "height": 689,
+      "words": 98,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Powerful platforms to help you succeed",
+       "size": 26,
+       "tag": "h2"
+      },
+      "left": 48,
+      "right": 80,
+      "textLeft": 48,
+      "textRight": 80,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.sgs-section.sgs-quote-band",
+      "tag": "section",
+      "top": 2456,
+      "height": 280,
+      "words": 30,
+      "media": 0,
+      "middle": 0,
+      "heading": null,
+      "left": 48,
+      "right": 93,
+      "textLeft": 48,
+      "textRight": 93,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.sgs-section",
+      "tag": "section",
+      "top": 2735,
+      "height": 1035,
+      "words": 123,
+      "media": 1,
+      "middle": 0,
+      "heading": {
+       "text": "A broker you can audit",
+       "size": 26,
+       "tag": "h2"
+      },
+      "left": 48,
+      "right": 48,
+      "textLeft": 48,
+      "textRight": 109,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#strategies-home.sgs-section.sgs-section-alt",
+      "tag": "section",
+      "top": 3771,
+      "height": 584,
+      "words": 43,
+      "media": 0,
+      "middle": 56,
+      "heading": {
+       "text": "Building your wealth across sectors",
+       "size": 26,
+       "tag": "h2"
+      },
+      "left": 48,
+      "right": 48,
+      "textLeft": 48,
+      "textRight": 48,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.sgs-section",
+      "tag": "section",
+      "top": 4355,
+      "height": 484,
+      "words": 79,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Choose the account that fits. Open it in minutes.",
+       "size": 26,
+       "tag": "h2"
+      },
+      "left": 48,
+      "right": 51,
+      "textLeft": 48,
+      "textRight": 51,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.sgs-live-band",
+      "tag": "section",
+      "top": 4839,
+      "height": 368,
+      "words": 50,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "8:29:31 pm",
+       "size": 25,
+       "tag": "div"
+      },
+      "left": 48,
+      "right": 102,
+      "textLeft": 48,
+      "textRight": 102,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "footer.sgs-footer",
+      "tag": "footer",
+      "top": 5206,
+      "height": 765,
+      "words": 84,
+      "media": 0,
+      "middle": 19,
+      "heading": {
+       "text": "Account",
+       "size": 13,
+       "tag": "h3"
+      },
+      "left": 48,
+      "right": 48,
+      "textLeft": 48,
+      "textRight": 48,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "Institutional discipline, applied.",
+      "size": 32,
+      "top": 260,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 48,
+      "n": 14
+     },
+     {
+      "x": 73,
+      "n": 8
+     },
+     {
+      "x": 420,
+      "n": 8
+     },
+     {
+      "x": 110,
+      "n": 2
+     },
+     {
+      "x": 279,
+      "n": 2
+     },
+     {
+      "x": 511,
+      "n": 2
+     }
+    ],
+    "leftBlocks": 36,
+    "bodySize": 14,
+    "stage": false,
+    "explains": true,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": null,
+   "consoleErrors": []
+  },
+  {
+   "width": 390,
+   "height": 844,
+   "load": "load",
+   "screens": 10,
+   "filled": [
+    0.79,
+    0.34,
+    0.86,
+    0.37,
+    0.68,
+    0.78,
+    0.42,
+    0.51,
+    1,
+    1
+   ],
+   "motion": {
+    "elements": 22,
+    "css": 0,
+    "transitions": 22,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "page": {
+     "height": 8186,
+     "screens": 9.7,
+     "words": 663,
+     "img": 4,
+     "video": 0,
+     "canvas": 0,
+     "svg": 9,
+     "sections": 9,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 1,
+     "uiAbuse": false,
+     "realPictures": 2,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [
+      "reflective-skyscraper-facade-unsplash.jpg",
+      "sunlight-on-the-curved-honeycomb-glass-facade.jp"
+     ],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Institutional discipline, applied.",
+     "words": 3,
+     "chars": 34,
+     "lines": 2,
+     "size": 31.2,
+     "vw": 8,
+     "font": "Poppins",
+     "weight": 600,
+     "tracking": -0.03,
+     "leading": 1.1,
+     "upper": false,
+     "italic": false,
+     "mono": false,
+     "align": "left",
+     "position": "center",
+     "widthRatio": 0.9,
+     "top": 231,
+     "tag": "h1",
+     "kind": "heading"
+    },
+    "h1": {
+     "text": "Institutional discipline, applied.",
+     "words": 3,
+     "lines": 2,
+     "size": 31.2,
+     "font": "Poppins"
+    },
+    "headings": [
+     {
+      "text": "Institutional discipline, applied.",
+      "words": 3,
+      "chars": 34,
+      "lines": 2,
+      "size": 31.2,
+      "vw": 8,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.03,
+      "leading": 1.1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 231,
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "A brokerage built for clarity",
+      "words": 5,
+      "chars": 29,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.88,
+      "top": 629,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Discover a world of opportunities",
+      "words": 5,
+      "chars": 33,
+      "lines": 2,
+      "size": 26,
+      "vw": 6.7,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 1813,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "40+",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 40,
+      "vw": 10.3,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.03,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.83,
+      "top": 2025,
+      "tag": "strong",
+      "kind": "heading"
+     },
+     {
+      "text": "9",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 40,
+      "vw": 10.3,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.03,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.83,
+      "top": 2120,
+      "tag": "strong",
+      "kind": "heading"
+     },
+     {
+      "text": "24/7",
+      "words": 1,
+      "chars": 4,
+      "lines": 1,
+      "size": 40,
+      "vw": 10.3,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.03,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.83,
+      "top": 2214,
+      "tag": "strong",
+      "kind": "heading"
+     },
+     {
+      "text": "Powerful platforms to help you succeed",
+      "words": 6,
+      "chars": 38,
+      "lines": 2,
+      "size": 26,
+      "vw": 6.7,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 2431,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "A broker you can audit",
+      "words": 5,
+      "chars": 22,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 3771,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "10,000+",
+      "words": 1,
+      "chars": 7,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.2,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": 0,
+      "leading": 1.55,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.34,
+      "top": 4609,
+      "tag": "strong",
+      "kind": "heading"
+     },
+     {
+      "text": "<50ms",
+      "words": 1,
+      "chars": 5,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.2,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": 0,
+      "leading": 1.55,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.29,
+      "top": 4609,
+      "tag": "strong",
+      "kind": "heading"
+     },
+     {
+      "text": "40+",
+      "words": 1,
+      "chars": 3,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.2,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": 0,
+      "leading": 1.55,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.25,
+      "top": 4697,
+      "tag": "strong",
+      "kind": "heading"
+     },
+     {
+      "text": "Building your wealth across sectors",
+      "words": 5,
+      "chars": 35,
+      "lines": 2,
+      "size": 26,
+      "vw": 6.7,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 4880,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "Choose the account that fits. Open it in minutes.",
+      "words": 9,
+      "chars": 49,
+      "lines": 2,
+      "size": 26,
+      "vw": 6.7,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 6006,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "The desk keeps market hours. Your records keep working.",
+      "words": 9,
+      "chars": 55,
+      "lines": 2,
+      "size": 22,
+      "vw": 5.6,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": -0.02,
+      "leading": 1.15,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.9,
+      "top": 6671,
+      "tag": "h2",
+      "kind": "heading"
+     },
+     {
+      "text": "8:29:41 pm",
+      "words": 2,
+      "chars": 10,
+      "lines": 1,
+      "size": 25,
+      "vw": 6.4,
+      "font": "Poppins",
+      "weight": 600,
+      "tracking": 0,
+      "leading": 1.55,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.48,
+      "top": 6869,
+      "tag": "div",
+      "kind": "heading"
+     }
+    ],
+    "headingSummary": {
+     "count": 15,
+     "maxLines": 2,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": 5,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Montserrat",
+       "share": 0.81,
+       "mono": false
+      },
+      {
+       "family": "Poppins",
+       "share": 0.19,
+       "mono": false
+      }
+     ],
+     "familyCount": 2,
+     "sizes": [
+      13,
+      14,
+      15,
+      16,
+      17,
+      20,
+      22,
+      24,
+      26,
+      31,
+      40
+     ],
+     "sizeCount": 11,
+     "notLoaded": [],
+     "body": {
+      "font": "Montserrat",
+      "size": 13.5,
+      "leading": 1.55,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 13.2
+     },
+     "measureChars": 54,
+     "max": {
+      "size": 40,
+      "vw": 10.3,
+      "font": "Poppins",
+      "text": "40+"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 4,
+     "microLabelShare": 0.007,
+     "microSamples": [
+      "Account",
+      "Products",
+      "Company",
+      "Support"
+     ],
+     "upperShare": 0.01,
+     "centerShare": 0.03,
+     "smallText": 0
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#ffffff",
+     "bodyBgHsl": {
+      "h": 0,
+      "s": 0,
+      "l": 1
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#ffffff",
+       "top": 0,
+       "hsl": {
+        "h": 0,
+        "s": 0,
+        "l": 1
+       }
+      },
+      {
+       "color": "#0a0e27",
+       "top": 137,
+       "hsl": {
+        "h": 232,
+        "s": 0.59,
+        "l": 0.1
+       }
+      },
+      {
+       "color": "#f5f6fa",
+       "top": 3410,
+       "hsl": {
+        "h": 228,
+        "s": 0.33,
+        "l": 0.97
+       }
+      },
+      {
+       "color": "#12183a",
+       "top": 6617,
+       "hsl": {
+        "h": 231,
+        "s": 0.53,
+        "l": 0.15
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#5b6472",
+       "share": 0.46
+      },
+      {
+       "color": "#171c2e",
+       "share": 0.17
+      },
+      {
+       "color": "#aeb6d6",
+       "share": 0.1
+      },
+      {
+       "color": "#8a93c8",
+       "share": 0.07
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.07
+      }
+     ],
+     "button": {
+      "bg": "#4f46e5",
+      "hsl": {
+       "h": 243,
+       "s": 0.75,
+       "l": 0.59
+      },
+      "fg": "#ffffff"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 3,
+     "inHero": 2,
+     "radius": 6,
+     "height": 42,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Open Account",
+      "Start your account"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 1,
+     "hairlineSamples": [
+      "div.sgs-footer-legal 350px"
+     ],
+     "outlinedBoxes": 17,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 19,
+     "boxRadius": 10,
+     "squareMedia": 1,
+     "roundedMedia": 1,
+     "mediaRadius": 12,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 4,
+       "iconTopped": true,
+       "rounded": true,
+       "top": 699
+      },
+      {
+       "count": 4,
+       "iconTopped": false,
+       "rounded": true,
+       "top": 2551
+      },
+      {
+       "count": 3,
+       "iconTopped": false,
+       "rounded": false,
+       "top": 6106
+      }
+     ]
+    },
+    "heroMedia": [
+     {
+      "type": "img",
+      "ratio": 0.52
+     }
+    ],
+    "nav": {
+     "links": 2,
+     "fixed": true,
+     "height": 56,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "montserrat",
+     "poppins"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "pageH": 8186,
+    "margins": {
+     "left": 20,
+     "right": 20
+    },
+    "sections": [
+     {
+      "sel": "section.sgs-hero",
+      "tag": "section",
+      "top": 137,
+      "height": 440,
+      "words": 33,
+      "media": 1,
+      "middle": 0,
+      "heading": {
+       "text": "Institutional discipline, applied.",
+       "size": 31,
+       "tag": "h1"
+      },
+      "left": 20,
+      "right": 24,
+      "textLeft": 20,
+      "textRight": 24,
+      "fullBleed": true,
+      "footer": false,
+      "hero": true,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.sgs-section",
+      "tag": "section",
+      "top": 577,
+      "height": 1166,
+      "words": 94,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "A brokerage built for clarity",
+       "size": 26,
+       "tag": "h2"
+      },
+      "left": 20,
+      "right": 28,
+      "textLeft": 20,
+      "textRight": 28,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.sgs-stats-band",
+      "tag": "section",
+      "top": 1743,
+      "height": 614,
+      "words": 45,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "40+",
+       "size": 40,
+       "tag": "strong"
+      },
+      "left": 20,
+      "right": 37,
+      "textLeft": 20,
+      "textRight": 37,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#platforms-home.sgs-section",
+      "tag": "section",
+      "top": 2357,
+      "height": 1053,
+      "words": 89,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Investor Workspace",
+       "size": 17,
+       "tag": "h3"
+      },
+      "left": 45,
+      "right": 48,
+      "textLeft": 45,
+      "textRight": 48,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.sgs-section.sgs-quote-band",
+      "tag": "section",
+      "top": 3410,
+      "height": 309,
+      "words": 30,
+      "media": 0,
+      "middle": 0,
+      "heading": null,
+      "left": 20,
+      "right": 44,
+      "textLeft": 20,
+      "textRight": 44,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.sgs-section",
+      "tag": "section",
+      "top": 3719,
+      "height": 1108,
+      "words": 123,
+      "media": 1,
+      "middle": 0,
+      "heading": {
+       "text": "A broker you can audit",
+       "size": 26,
+       "tag": "h2"
+      },
+      "left": 20,
+      "right": 20,
+      "textLeft": 20,
+      "textRight": 21,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section#strategies-home.sgs-section.sgs-section-alt",
+      "tag": "section",
+      "top": 4828,
+      "height": 1127,
+      "words": 43,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Building your wealth across sectors",
+       "size": 26,
+       "tag": "h2"
+      },
+      "left": 20,
+      "right": 22,
+      "textLeft": 20,
+      "textRight": 22,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.sgs-section",
+      "tag": "section",
+      "top": 5954,
+      "height": 662,
+      "words": 79,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Choose the account that fits. Open it in minutes.",
+       "size": 26,
+       "tag": "h2"
+      },
+      "left": 20,
+      "right": 20,
+      "textLeft": 20,
+      "textRight": 20,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "section.sgs-live-band",
+      "tag": "section",
+      "top": 6617,
+      "height": 416,
+      "words": 50,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "8:29:41 pm",
+       "size": 25,
+       "tag": "div"
+      },
+      "left": 20,
+      "right": 21,
+      "textLeft": 20,
+      "textRight": 21,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": true,
+      "pinned": false
+     },
+     {
+      "sel": "footer.sgs-footer",
+      "tag": "footer",
+      "top": 7033,
+      "height": 1154,
+      "words": 84,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "Account",
+       "size": 13,
+       "tag": "h3"
+      },
+      "left": 20,
+      "right": 32,
+      "textLeft": 20,
+      "textRight": 32,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "Institutional discipline, applied.",
+      "size": 31,
+      "top": 231,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 20,
+      "n": 19
+     },
+     {
+      "x": 45,
+      "n": 16
+     }
+    ],
+    "leftBlocks": 35,
+    "bodySize": 14,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": null,
+   "consoleErrors": []
+  }
+ ],
+ "findings": [
+  {
+   "level": "FAIL",
+   "id": "micro-label",
+   "width": 1440,
+   "message": "4 tiny uppercase letter-spaced labels (e.g. \"Account\", \"Products\", \"Company\", \"Support\").",
+   "fix": "Use sentence-case text at a readable size, or delete the label.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "hairline",
+   "width": 1440,
+   "message": "1 thin rule(s)/divider line(s): div.sgs-footer-legal 1144px",
+   "fix": "Delete. Separate with space, a tone change, or scale. Lines are only for real tables and form fields.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "outlined-box",
+   "width": 1440,
+   "message": "8 boxes drawn with a 1px outline.",
+   "fix": "Define a surface by its fill (one tone step from the page) or leave the content unboxed.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "icon-cards",
+   "width": 1440,
+   "message": "1 row(s) of identical cards each topped with a small icon (4 cards).",
+   "fix": "Replace with one composed section from the direction: a narrative split, a list set in large type, or real imagery per item.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "size-count",
+   "width": 1440,
+   "message": "11 different font sizes (13, 14, 15, 17, 18, 24, 27, 28, 34, 48, 62).",
+   "fix": "A page needs about five: display, heading, lead, body, small.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "body-size",
+   "width": 1440,
+   "message": "Body text is 13.5px (the size most of the running text is set in).",
+   "fix": "Body copy 16–20px. Map small sizes from blueprints onto your body step.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "FAIL",
+   "id": "few-pictures",
+   "width": 1440,
+   "message": "Only 2 picture(s) on the page (2 photographs, footage or raster images, 0 interface fragments). Drawings in SVG do not count.",
+   "fix": "Find real pictures of the subject's world with scripts/assets.mjs (photographs, archival images, maps, engravings, footage), download them to assets/ and give them room: a hero picture, one per section that has a subject, a full-width band. At least four, usually six to twelve."
+  },
+  {
+   "level": "WARN",
+   "id": "no-footage",
+   "width": 1440,
+   "message": "No video anywhere on the page.",
+   "fix": "Look for one honest clip with scripts/assets.mjs --video (the place, the material, the process) and use it as a muted loop with a poster frame. Defend its absence only if no clip fits the subject."
+  },
+  {
+   "level": "WARN",
+   "id": "name-only-title",
+   "width": 390,
+   "message": "The h1 is a bare name (\"Institutional discipline, applied.\") and nothing else on the first screen says what this is.",
+   "fix": "Keep the name if it leads, and give the line under it (18px or more) the plain words: what it is, for whom, where or when. In the study of 97 Sites of the Day, first screens that named nothing lost usability and content points."
+  }
+ ],
+ "images": [
+  {
+   "viewport": "desktop",
+   "width": 1440,
+   "fold": "D:\\backend - Copy\\ebank_dashboard\\.taste-skill\\inspect\\desktop-fold.jpg",
+   "pages": [
+    "D:\\backend - Copy\\ebank_dashboard\\.taste-skill\\inspect\\desktop-page-01.jpg",
+    "D:\\backend - Copy\\ebank_dashboard\\.taste-skill\\inspect\\desktop-page-02.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "tablet",
+   "width": 768,
+   "fold": "D:\\backend - Copy\\ebank_dashboard\\.taste-skill\\inspect\\tablet-fold.jpg",
+   "pages": [
+    "D:\\backend - Copy\\ebank_dashboard\\.taste-skill\\inspect\\tablet-page-01.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "mobile",
+   "width": 390,
+   "fold": "D:\\backend - Copy\\ebank_dashboard\\.taste-skill\\inspect\\mobile-fold.jpg",
+   "pages": [
+    "D:\\backend - Copy\\ebank_dashboard\\.taste-skill\\inspect\\mobile-page-01.jpg",
+    "D:\\backend - Copy\\ebank_dashboard\\.taste-skill\\inspect\\mobile-page-02.jpg"
+   ],
+   "film": []
+  }
+ ]
+}
