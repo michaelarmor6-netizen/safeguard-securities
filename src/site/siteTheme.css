@@ -193,8 +193,8 @@
 .sgs-mega-inner {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr)) 300px;
-  gap: 32px;
-  padding: 36px var(--sgs-pad) 40px;
+  gap: 28px;
+  padding: 32px var(--sgs-pad) 36px;
   max-width: 1240px;
   margin-inline: auto;
 }
@@ -202,7 +202,7 @@
 .sgs-mega h3 {
   font-size: 13px;
   letter-spacing: 0.04em;
-  color: var(--sgs-muted-2);
+  color: var(--sgs-muted);
   text-transform: uppercase;
   font-weight: 600;
   padding-bottom: 10px;
@@ -218,12 +218,13 @@
 }
 
 .sgs-mega li {
-  margin-bottom: 9px;
+  margin-bottom: 8px;
 }
 
 .sgs-mega li a {
-  font-size: 14.5px;
+  font-size: 13.5px;
   color: var(--sgs-ink);
+  font-weight: 500;
   transition: color 140ms var(--sgs-ease);
 }
 
@@ -234,8 +235,9 @@
 .sgs-mega li a span {
   display: block;
   font-size: 13px;
+  font-weight: 400;
   color: var(--sgs-muted);
-  margin-top: 1px;
+  margin-top: 2px;
 }
 
 .sgs-mega-cta {
@@ -247,7 +249,7 @@
 
 .sgs-mega-cta p {
   font-family: var(--sg-font-display, 'Poppins', sans-serif);
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
   line-height: 1.35;
   margin-bottom: 14px;
